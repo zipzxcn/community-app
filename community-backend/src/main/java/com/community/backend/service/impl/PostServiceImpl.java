@@ -10,6 +10,7 @@ import com.community.backend.common.error.BizException;
 import com.community.backend.common.error.ErrorCode;
 import com.community.backend.dto.post.CreatePostRequest;
 import com.community.backend.dto.post.PostQueryRequest;
+import com.community.backend.dto.post.UpdatePostRequest;
 import com.community.backend.entity.AppUser;
 import com.community.backend.entity.FileObject;
 import com.community.backend.entity.Post;
@@ -38,6 +39,7 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -90,14 +92,7 @@ public class PostServiceImpl implements PostService {
     @Transactional(rollbackFor = Exception.class)
     public Long create(Long currentUserId, CreatePostRequest request) {
         LinkedHashSet<Long> uniqueTagIds = normalizeIds(request.getTagIds());
-        if (!uniqueTagIds.isEmpty()) {
-            long activeTagCount = tagMapper.selectCount(new LambdaQueryWrapper<Tag>()
-                    .in(Tag::getId, uniqueTagIds)
-                    .eq(Tag::getStatus, "ACTIVE"));
-            if (activeTagCount != uniqueTagIds.size()) {
-                throw BizException.of(ErrorCode.POST_TAG_INVALID);
-            }
-        }
+        validateTagIds(uniqueTagIds);
 
         Post post = Post.builder()
                 .authorId(currentUserId)
@@ -369,6 +364,109 @@ public class PostServiceImpl implements PostService {
     }
 
     /**
+     * 编辑帖子：仅作者可修改，支持正文/封面/评论开关/标签/附件更新。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void update(Long currentUserId, Long postId, UpdatePostRequest request) {
+        Post post = mustGetOwnedPost(currentUserId, postId);
+
+        postMapper.update(null, new LambdaUpdateWrapper<Post>()
+                .eq(Post::getId, post.getId())
+                .set(Post::getTitle, request.getTitle())
+                .set(Post::getExcerpt, buildExcerpt(request.getContentMd()))
+                .set(Post::getContentMd, request.getContentMd())
+                .set(Post::getContentHtml, request.getContentMd())
+                .set(Post::getCoverUrl, request.getCoverUrl())
+                .set(Post::getAllowComment, Boolean.TRUE.equals(request.getAllowComment()) ? 1 : 0));
+
+        // 传 tagIds 才同步标签关系；不传视为“不改标签”。
+        if (request.getTagIds() != null) {
+            syncPostTags(postId, request.getTagIds());
+        }
+        // 传 attachmentFileIds 才同步附件关系；不传视为“不改附件”。
+        if (request.getAttachmentFileIds() != null) {
+            syncPostAttachments(currentUserId, postId, request.getAttachmentFileIds());
+        }
+    }
+
+    /**
+     * 软删除帖子：仅作者可删，同时维护用户发帖计数与标签计数。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void delete(Long currentUserId, Long postId) {
+        Post post = mustGetOwnedPost(currentUserId, postId);
+
+        postMapper.update(null, new LambdaUpdateWrapper<Post>()
+                .eq(Post::getId, post.getId())
+                .eq(Post::getIsDeleted, 0)
+                .set(Post::getIsDeleted, 1)
+                .set(Post::getDeletedAt, LocalDateTime.now()));
+
+        appUserMapper.update(null, new LambdaUpdateWrapper<AppUser>()
+                .eq(AppUser::getId, currentUserId)
+                .setSql("post_count = IF(post_count > 0, post_count - 1, 0)"));
+
+        List<Long> tagIds = postTagRelMapper.selectList(new LambdaQueryWrapper<PostTagRel>()
+                        .eq(PostTagRel::getPostId, postId))
+                .stream()
+                .map(PostTagRel::getTagId)
+                .toList();
+        if (!tagIds.isEmpty()) {
+            for (Long tagId : new LinkedHashSet<>(tagIds)) {
+                tagMapper.update(null, new LambdaUpdateWrapper<Tag>()
+                        .eq(Tag::getId, tagId)
+                        .setSql("post_count = IF(post_count > 0, post_count - 1, 0)"));
+            }
+        }
+
+        // 删除帖子时解绑附件，避免后续详情仍能读取到旧绑定。
+        fileObjectMapper.update(null, new LambdaUpdateWrapper<FileObject>()
+                .eq(FileObject::getBizType, "POST")
+                .eq(FileObject::getBizId, postId)
+                .eq(FileObject::getUploaderId, currentUserId)
+                .set(FileObject::getBizType, null)
+                .set(FileObject::getBizId, null)
+                .set(FileObject::getStatus, "UPLOADED"));
+    }
+
+    /**
+     * 显隐帖子：仅作者可操作，hidden=true 下架，hidden=false 上架。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void hide(Long currentUserId, Long postId, boolean hidden) {
+        Post post = mustGetOwnedPost(currentUserId, postId);
+        String targetStatus = hidden ? "HIDDEN" : "PUBLISHED";
+        if (targetStatus.equals(post.getStatus())) {
+            return;
+        }
+        postMapper.update(null, new LambdaUpdateWrapper<Post>()
+                .eq(Post::getId, post.getId())
+                .set(Post::getStatus, targetStatus));
+    }
+
+    /**
+     * 标签列表：仅返回 ACTIVE 标签，按帖子数量降序。
+     */
+    @Override
+    public List<TagVo> listTags() {
+        return tagMapper.selectList(new LambdaQueryWrapper<Tag>()
+                        .eq(Tag::getStatus, "ACTIVE")
+                        .orderByDesc(Tag::getPostCount)
+                        .orderByAsc(Tag::getId))
+                .stream()
+                .map(tag -> {
+                    TagVo vo = new TagVo();
+                    vo.setId(tag.getId());
+                    vo.setName(tag.getName());
+                    return vo;
+                })
+                .toList();
+    }
+
+    /**
      * 帖子点赞数 +1。
      */
     private void increasePostLikeCount(Long postId) {
@@ -387,6 +485,95 @@ public class PostServiceImpl implements PostService {
     }
 
     /**
+     * 校验并同步帖子标签关系：
+     * 1) 新增关联时 post_count +1
+     * 2) 移除关联时 post_count -1
+     */
+    private void syncPostTags(Long postId, List<Long> inputTagIds) {
+        LinkedHashSet<Long> nextTagIds = normalizeIds(inputTagIds);
+        validateTagIds(nextTagIds);
+
+        List<PostTagRel> existingRels = postTagRelMapper.selectList(new LambdaQueryWrapper<PostTagRel>()
+                .eq(PostTagRel::getPostId, postId));
+        Set<Long> existingTagIds = existingRels.stream()
+                .map(PostTagRel::getTagId)
+                .collect(Collectors.toCollection(HashSet::new));
+
+        Set<Long> toAdd = new HashSet<>(nextTagIds);
+        toAdd.removeAll(existingTagIds);
+
+        Set<Long> toRemove = new HashSet<>(existingTagIds);
+        toRemove.removeAll(nextTagIds);
+
+        if (!toAdd.isEmpty()) {
+            for (Long tagId : toAdd) {
+                postTagRelMapper.insert(PostTagRel.builder()
+                        .postId(postId)
+                        .tagId(tagId)
+                        .build());
+                tagMapper.update(null, new LambdaUpdateWrapper<Tag>()
+                        .eq(Tag::getId, tagId)
+                        .setSql("post_count = post_count + 1"));
+            }
+        }
+        if (!toRemove.isEmpty()) {
+            postTagRelMapper.delete(new LambdaQueryWrapper<PostTagRel>()
+                    .eq(PostTagRel::getPostId, postId)
+                    .in(PostTagRel::getTagId, toRemove));
+            for (Long tagId : toRemove) {
+                tagMapper.update(null, new LambdaUpdateWrapper<Tag>()
+                        .eq(Tag::getId, tagId)
+                        .setSql("post_count = IF(post_count > 0, post_count - 1, 0)"));
+            }
+        }
+    }
+
+    /**
+     * 同步帖子附件绑定关系：只允许绑定当前用户上传的文件。
+     */
+    private void syncPostAttachments(Long currentUserId, Long postId, List<Long> inputFileIds) {
+        LinkedHashSet<Long> nextFileIds = normalizeIds(inputFileIds);
+
+        List<FileObject> existingFiles = fileObjectMapper.selectList(new LambdaQueryWrapper<FileObject>()
+                .eq(FileObject::getBizType, "POST")
+                .eq(FileObject::getBizId, postId)
+                .eq(FileObject::getStatus, "BOUND")
+                .eq(FileObject::getUploaderId, currentUserId));
+        Set<Long> existingFileIds = existingFiles.stream()
+                .map(FileObject::getId)
+                .collect(Collectors.toSet());
+
+        Set<Long> toUnbind = new HashSet<>(existingFileIds);
+        toUnbind.removeAll(nextFileIds);
+        if (!toUnbind.isEmpty()) {
+            fileObjectMapper.update(null, new LambdaUpdateWrapper<FileObject>()
+                    .in(FileObject::getId, toUnbind)
+                    .eq(FileObject::getUploaderId, currentUserId)
+                    .set(FileObject::getBizType, null)
+                    .set(FileObject::getBizId, null)
+                    .set(FileObject::getStatus, "UPLOADED"));
+        }
+
+        if (!nextFileIds.isEmpty()) {
+            // 先统一绑定，再按输入顺序回写 sort_order。
+            fileObjectMapper.update(null, new LambdaUpdateWrapper<FileObject>()
+                    .in(FileObject::getId, nextFileIds)
+                    .eq(FileObject::getUploaderId, currentUserId)
+                    .set(FileObject::getBizType, "POST")
+                    .set(FileObject::getBizId, postId)
+                    .set(FileObject::getStatus, "BOUND"));
+
+            int order = 0;
+            for (Long fileId : nextFileIds) {
+                fileObjectMapper.update(null, new LambdaUpdateWrapper<FileObject>()
+                        .eq(FileObject::getId, fileId)
+                        .eq(FileObject::getUploaderId, currentUserId)
+                        .set(FileObject::getSortOrder, order++));
+            }
+        }
+    }
+
+    /**
      * 校验帖子是否为可见发布态。
      */
     private Post mustGetPublishedPost(Long postId) {
@@ -399,6 +586,38 @@ public class PostServiceImpl implements PostService {
             throw BizException.of(ErrorCode.POST_NOT_FOUND);
         }
         return post;
+    }
+
+    /**
+     * 校验帖子存在且当前用户为作者（用于编辑/删除/下架）。
+     */
+    private Post mustGetOwnedPost(Long currentUserId, Long postId) {
+        Post post = postMapper.selectOne(new LambdaQueryWrapper<Post>()
+                .eq(Post::getId, postId)
+                .eq(Post::getIsDeleted, 0)
+                .last("LIMIT 1"));
+        if (post == null) {
+            throw BizException.of(ErrorCode.POST_NOT_FOUND);
+        }
+        if (!Objects.equals(post.getAuthorId(), currentUserId)) {
+            throw BizException.of(ErrorCode.AUTH_ACCESS_DENIED);
+        }
+        return post;
+    }
+
+    /**
+     * 校验标签合法性：全部必须存在且状态为 ACTIVE。
+     */
+    private void validateTagIds(Set<Long> tagIds) {
+        if (CollectionUtils.isEmpty(tagIds)) {
+            return;
+        }
+        long activeTagCount = tagMapper.selectCount(new LambdaQueryWrapper<Tag>()
+                .in(Tag::getId, tagIds)
+                .eq(Tag::getStatus, "ACTIVE"));
+        if (activeTagCount != tagIds.size()) {
+            throw BizException.of(ErrorCode.POST_TAG_INVALID);
+        }
     }
 
     /**

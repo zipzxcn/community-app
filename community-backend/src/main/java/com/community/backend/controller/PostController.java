@@ -3,20 +3,26 @@ package com.community.backend.controller;
 import com.community.backend.common.api.ApiResponse;
 import com.community.backend.common.api.PageResponse;
 import com.community.backend.dto.post.CreatePostRequest;
+import com.community.backend.dto.post.HidePostRequest;
 import com.community.backend.dto.post.PostQueryRequest;
+import com.community.backend.dto.post.UpdatePostRequest;
 import com.community.backend.security.SecurityUtils;
 import com.community.backend.service.PostService;
 import com.community.backend.vo.post.PostDetailVo;
 import com.community.backend.vo.post.PostListItemVo;
+import com.community.backend.vo.post.TagVo;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -49,6 +55,14 @@ public class PostController {
     public ApiResponse<PageResponse<PostListItemVo>> list(@Valid PostQueryRequest query) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         return ApiResponse.success(postService.list(query, currentUserId));
+    }
+
+    /**
+     * 标签列表：仅返回 ACTIVE 标签，供前端筛选与发帖选择。
+     */
+    @GetMapping("/tags")
+    public ApiResponse<List<TagVo>> tags() {
+        return ApiResponse.success(postService.listTags());
     }
 
     /**
@@ -97,6 +111,36 @@ public class PostController {
     public ApiResponse<Void> unfavorite(@PathVariable Long postId) {
         Long currentUserId = SecurityUtils.requireUserId();
         postService.unfavorite(currentUserId, postId);
+        return ApiResponse.success(null);
+    }
+
+    /**
+     * 编辑帖子：仅作者可编辑自己的帖子。
+     */
+    @PutMapping("/{postId}")
+    public ApiResponse<Void> update(@PathVariable Long postId, @Valid @RequestBody UpdatePostRequest request) {
+        Long currentUserId = SecurityUtils.requireUserId();
+        postService.update(currentUserId, postId, request);
+        return ApiResponse.success(null);
+    }
+
+    /**
+     * 软删除帖子：仅作者可删，数据保留用于审计与回溯。
+     */
+    @DeleteMapping("/{postId}")
+    public ApiResponse<Void> delete(@PathVariable Long postId) {
+        Long currentUserId = SecurityUtils.requireUserId();
+        postService.delete(currentUserId, postId);
+        return ApiResponse.success(null);
+    }
+
+    /**
+     * 帖子显隐：hidden=true 下架，hidden=false 重新上架。
+     */
+    @PatchMapping("/{postId}/hide")
+    public ApiResponse<Void> hide(@PathVariable Long postId, @Valid @RequestBody HidePostRequest request) {
+        Long currentUserId = SecurityUtils.requireUserId();
+        postService.hide(currentUserId, postId, Boolean.TRUE.equals(request.getHidden()));
         return ApiResponse.success(null);
     }
 }
