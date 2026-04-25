@@ -44,6 +44,26 @@ management:
         include: health,info
 
 app:
+  cors:
+    # 前后端分离本地联调默认来源；生产环境请替换为正式域名。
+    allowed-origins:
+      - http://localhost:5173
+      - http://127.0.0.1:5173
+      - http://localhost:4173
+      - http://127.0.0.1:4173
+    allowed-methods:
+      - GET
+      - POST
+      - PUT
+      - PATCH
+      - DELETE
+      - OPTIONS
+    allowed-headers:
+      - "*"
+    exposed-headers:
+      - Authorization
+    allow-credentials: true
+    max-age: 3600
   security:
     jwt:
       secret: change-this-secret-change-this-secret

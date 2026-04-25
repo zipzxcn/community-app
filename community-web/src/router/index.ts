@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
+import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -14,6 +15,24 @@ const router = createRouter({
           component: () => import('@/views/home/HomeView.vue'),
         },
         {
+          path: 'posts/publish',
+          name: 'post-publish',
+          component: () => import('@/views/post/PostPublishView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'posts/:postId',
+          name: 'post-detail',
+          component: () => import('@/views/post/PostDetailView.vue'),
+          props: (route) => ({ postId: Number(route.params.postId) }),
+        },
+        {
+          path: 'drafts',
+          name: 'drafts',
+          component: () => import('@/views/draft/DraftListView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
           path: 'login',
           name: 'login',
           component: () => import('@/views/auth/LoginView.vue'),
@@ -26,6 +45,18 @@ const router = createRouter({
       ],
     },
   ],
+})
+
+router.beforeEach(async (to) => {
+  const authStore = useAuthStore()
+  await authStore.restore()
+  if (to.meta.requiresAuth && !authStore.isLoggedIn) {
+    return { name: 'login', query: { redirect: to.fullPath } }
+  }
+  if ((to.name === 'login' || to.name === 'register') && authStore.isLoggedIn) {
+    return { name: 'home' }
+  }
+  return true
 })
 
 export default router

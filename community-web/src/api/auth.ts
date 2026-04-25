@@ -1,24 +1,19 @@
 import client from '@/api/client'
-
-export interface LoginPayload {
-  username: string
-  password: string
-}
-
-export interface RegisterPayload {
-  username: string
-  password: string
-  nickname: string
-}
+import type { CurrentUser } from '@/types/user'
+import type { LoginPayload, LoginResult, RegisterPayload } from '@/types/auth'
 
 export function login(payload: LoginPayload) {
-  return client.post('/auth/login', payload)
+  return client.post<never, LoginResult>('/auth/login', payload)
 }
 
 export function register(payload: RegisterPayload) {
-  return client.post('/auth/register', payload)
+  return client.post<never, { userId: number }>('/auth/register', payload)
 }
 
 export function fetchCurrentUser() {
-  return client.get('/auth/me')
+  return client.get<never, CurrentUser>('/auth/me')
+}
+
+export function logout(refreshToken: string) {
+  return client.post<never, void>('/auth/logout', { refreshToken })
 }
