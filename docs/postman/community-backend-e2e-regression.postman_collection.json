@@ -1,0 +1,1719 @@
+{
+  "info": {
+    "name": "community-backend 全链路回归集合（E2E）",
+    "_postman_id": "f1f37f29-df85-4fd9-a0d0-1f6ef8c5d001",
+    "description": "覆盖 auth/user/follow/post/comment/notification/chat/file 主链路 + 错误码回归。建议按顺序运行整个集合。",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('runId')) {",
+          "  const runId = String(Date.now());",
+          "  pm.collectionVariables.set('runId', runId);",
+          "  pm.collectionVariables.set('userAUsername', `e2e_a_${runId}`);",
+          "  pm.collectionVariables.set('userBUsername', `e2e_b_${runId}`);",
+          "  pm.collectionVariables.set('userANickname', `回归A_${runId.slice(-4)}`);",
+          "  pm.collectionVariables.set('userBNickname', `回归B_${runId.slice(-4)}`);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00-初始化账号与登录",
+      "item": [
+        {
+          "name": "Register A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Register A success', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "  pm.expect(json.code).to.eql(0);",
+                  "  pm.expect(json.data.userId).to.be.a('number');",
+                  "});",
+                  "pm.collectionVariables.set('userAId', String(json.data.userId));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{userAUsername}}\",\n  \"password\": \"{{password}}\",\n  \"nickname\": \"{{userANickname}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register B",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Register B success', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "  pm.expect(json.code).to.eql(0);",
+                  "  pm.expect(json.data.userId).to.be.a('number');",
+                  "});",
+                  "pm.collectionVariables.set('userBId', String(json.data.userId));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{userBUsername}}\",\n  \"password\": \"{{password}}\",\n  \"nickname\": \"{{userBNickname}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Login A success', function () {",
+                  "  pm.expect(json.code).to.eql(0);",
+                  "  pm.expect(json.data.accessToken).to.be.a('string');",
+                  "  pm.expect(json.data.refreshToken).to.be.a('string');",
+                  "});",
+                  "pm.collectionVariables.set('userAAccessToken', json.data.accessToken);",
+                  "pm.collectionVariables.set('userARefreshToken', json.data.refreshToken);",
+                  "if (json.data.userInfo && json.data.userInfo.id) pm.collectionVariables.set('userAId', String(json.data.userInfo.id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{userAUsername}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login B",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Login B success', function () {",
+                  "  pm.expect(json.code).to.eql(0);",
+                  "  pm.expect(json.data.accessToken).to.be.a('string');",
+                  "  pm.expect(json.data.refreshToken).to.be.a('string');",
+                  "});",
+                  "pm.collectionVariables.set('userBAccessToken', json.data.accessToken);",
+                  "pm.collectionVariables.set('userBRefreshToken', json.data.refreshToken);",
+                  "if (json.data.userInfo && json.data.userInfo.id) pm.collectionVariables.set('userBId', String(json.data.userInfo.id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{userBUsername}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "01-主链路回归",
+      "item": [
+        {
+          "name": "A Create Post",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Create post success', function () {",
+                  "  pm.expect(json.code).to.eql(0);",
+                  "  pm.expect(json.data.postId).to.be.a('number');",
+                  "});",
+                  "pm.collectionVariables.set('postId', String(json.data.postId));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"E2E 帖子 {{runId}}\",\n  \"contentMd\": \"# E2E 回归\\n\\n主链路联调帖子内容。\",\n  \"coverUrl\": \"https://example.com/cover.png\",\n  \"allowComment\": true,\n  \"tagIds\": [],\n  \"attachmentFileIds\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/posts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "posts"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Create Draft",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "const json = pm.response.json();",
+                    "pm.test('Create draft success', function () {",
+                    "  pm.expect(json.code).to.eql(0);",
+                    "  pm.expect(json.data.draftId).to.be.a('number');",
+                    "});",
+                    "if (json.code === 0 && json.data && typeof json.data.draftId === 'number') {",
+                    "  pm.collectionVariables.set('draftId', String(json.data.draftId));",
+                    "}"
+                  ]
+                }
+              }
+            ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"E2E 草稿 {{runId}}\",\n  \"contentMd\": \"草稿内容 {{runId}}\",\n  \"coverUrl\": \"https://example.com/draft-cover.png\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/drafts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "drafts"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Update Draft (AutoSave)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Update draft success', function () {",
+                  "  pm.expect(json.code).to.eql(0);",
+                  "  pm.expect(json.data.id).to.be.a('number');",
+                  "  pm.expect(json.data.autoSavedAt).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"E2E 草稿更新 {{runId}}\",\n  \"contentMd\": \"草稿更新内容 {{runId}}\",\n  \"coverUrl\": \"https://example.com/draft-cover-v2.png\",\n  \"autoSave\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/drafts/{{draftId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "drafts",
+                "{{draftId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Publish Draft",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Publish draft success', function () {",
+                  "  pm.expect(json.code).to.eql(0);",
+                  "  pm.expect(json.data.postId).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/drafts/{{draftId}}/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "drafts",
+                "{{draftId}}",
+                "publish"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Record Browse History",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Record history success', function () { pm.expect(json.code).to.eql(0); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/histories/{{postId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "histories",
+                "{{postId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A List Histories",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "const json = pm.response.json();",
+                    "pm.test('List histories success', function () {",
+                    "  pm.expect(json.code).to.eql(0);",
+                    "  pm.expect(json.data.list).to.be.an('array');",
+                    "  pm.expect(json.data.list.length).to.be.at.least(1);",
+                    "});",
+                    "if (json.code === 0 && json.data && json.data.list && json.data.list.length > 0 && json.data.list[0].id) {",
+                    "  pm.collectionVariables.set('historyId', String(json.data.list[0].id));",
+                    "}"
+                  ]
+                }
+              }
+            ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/histories?page=1&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "histories"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Delete History",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Delete history success', function () { pm.expect(json.code).to.eql(0); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/histories/{{historyId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "histories",
+                "{{historyId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "B Follow A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Follow success', function () { pm.expect(json.code).to.eql(0); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userBAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/follows/{{userAId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "follows",
+                "{{userAId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Follow B（建立互关）",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Mutual follow success', function () { pm.expect(json.code).to.eql(0); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/follows/{{userBId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "follows",
+                "{{userBId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "B Comment A Post",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Create comment success', function () {",
+                  "  pm.expect(json.code).to.eql(0);",
+                  "  pm.expect(json.data.id).to.be.a('number');",
+                  "});",
+                  "pm.collectionVariables.set('commentId', String(json.data.id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userBAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"E2E 评论 {{runId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/posts/{{postId}}/comments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "posts",
+                "{{postId}}",
+                "comments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "B Like A Post",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Like post success', function () { pm.expect(json.code).to.eql(0); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userBAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/posts/{{postId}}/like",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "posts",
+                "{{postId}}",
+                "like"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Unread Notification Count",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Unread count success', function () {",
+                  "  pm.expect(json.code).to.eql(0);",
+                  "  pm.expect(json.data.total).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notifications/unread-count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "unread-count"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A List Notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('List notifications success', function () {",
+                  "  pm.expect(json.code).to.eql(0);",
+                  "  pm.expect(json.data.list).to.be.an('array');",
+                  "});",
+                  "if (json.data.list && json.data.list.length > 0 && json.data.list[0].id) {",
+                  "  pm.collectionVariables.set('notificationId', String(json.data.list[0].id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notifications?page=1&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Mark Notification Read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Mark read success', function () { pm.expect(json.code).to.eql(0); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notifications/{{notificationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "{{notificationId}}",
+                "read"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Open Chat Thread With B",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Open thread success', function () {",
+                  "  pm.expect(json.code).to.eql(0);",
+                  "  pm.expect(json.data.threadId).to.be.a('number');",
+                  "});",
+                  "pm.collectionVariables.set('threadId', String(json.data.threadId));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/threads/with/{{userBId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "chat",
+                "threads",
+                "with",
+                "{{userBId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Send Chat Message",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('clientMsgId', `e2e_msg_${Date.now()}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Send message success', function () {",
+                  "  pm.expect(json.code).to.eql(0);",
+                  "  pm.expect(json.data.id).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientMsgId\": \"{{clientMsgId}}\",\n  \"messageType\": \"TEXT\",\n  \"content\": \"E2E 私信 {{runId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/threads/{{threadId}}/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "chat",
+                "threads",
+                "{{threadId}}",
+                "messages"
+              ]
+            }
+          }
+        },
+        {
+          "name": "B List Chat Messages",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('List messages success', function () {",
+                  "  pm.expect(json.code).to.eql(0);",
+                  "  pm.expect(json.data.list).to.be.an('array');",
+                  "});",
+                  "if (json.data.list && json.data.list.length > 0) {",
+                  "  const last = json.data.list[json.data.list.length - 1];",
+                  "  if (last && last.id) pm.collectionVariables.set('lastReadMessageId', String(last.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userBAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/threads/{{threadId}}/messages?size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "chat",
+                "threads",
+                "{{threadId}}",
+                "messages"
+              ],
+              "query": [
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "B Mark Chat Read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Mark chat read success', function () { pm.expect(json.code).to.eql(0); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userBAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lastReadMessageId\": {{lastReadMessageId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/threads/{{threadId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "chat",
+                "threads",
+                "{{threadId}}",
+                "read"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Get Upload Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "const json = pm.response.json();",
+                    "pm.test('Get upload token success', function () {",
+                    "  pm.expect(json.code).to.eql(0);",
+                    "  pm.expect(json.data.bucketName).to.be.a('string');",
+                    "  pm.expect(json.data.objectKey).to.be.a('string');",
+                    "});",
+                    "if (json.code === 0 && json.data) {",
+                    "  pm.collectionVariables.set('bucketName', json.data.bucketName);",
+                    "  pm.collectionVariables.set('objectKey', json.data.objectKey);",
+                    "  pm.collectionVariables.set('uploadUrl', json.data.uploadUrl);",
+                    "  const minioEndpoint = pm.collectionVariables.get('minioEndpoint') || 'http://127.0.0.1:9000';",
+                    "  pm.collectionVariables.set('fileAccessUrl', minioEndpoint + '/' + json.data.bucketName + '/' + json.data.objectKey);",
+                    "}"
+                  ]
+                }
+              }
+            ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bizType\": \"POST\",\n  \"fileName\": \"e2e_{{runId}}.png\",\n  \"contentType\": \"image/png\",\n  \"size\": {{uploadFileSize}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/files/upload-token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "files",
+                "upload-token"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Upload Binary To MinIO",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Upload binary success', function () {",
+                    "  pm.expect(pm.collectionVariables.get('uploadUrl')).to.be.a('string').and.not.empty;",
+                    "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                    "});"
+                  ]
+                }
+              }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "image/png"
+              }
+            ],
+            "body": {
+              "mode": "file",
+              "file": {
+                "src": "{{uploadFilePath}}"
+              }
+            },
+            "url": "{{uploadUrl}}"
+          }
+        },
+        {
+          "name": "A Complete Upload",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "const json = pm.response.json();",
+                    "pm.test('Complete upload success', function () {",
+                    "  pm.expect(json.code).to.eql(0);",
+                    "  pm.expect(json.data.id).to.be.a('number');",
+                    "});",
+                    "if (json.code === 0 && json.data && typeof json.data.id === 'number') {",
+                    "  pm.collectionVariables.set('fileId', String(json.data.id));",
+                    "}"
+                  ]
+                }
+              }
+            ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bizType\": \"POST\",\n  \"bizId\": {{postId}},\n  \"bucketName\": \"{{bucketName}}\",\n  \"objectKey\": \"{{objectKey}}\",\n  \"accessUrl\": \"{{fileAccessUrl}}\",\n  \"originalName\": \"e2e_{{runId}}.png\",\n  \"mimeType\": \"image/png\",\n  \"sizeBytes\": {{uploadFileSize}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/files/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "files",
+                "complete"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Delete File",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Delete file success', function () { pm.expect(json.code).to.eql(0); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/files/{{fileId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "files",
+                "{{fileId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02-错误码回归",
+      "item": [
+        {
+          "name": "Auth Me Without Token -> 20001",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Expect AUTH_UNAUTHORIZED', function () {",
+                  "  pm.expect(json.code).to.eql(20001);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Post Invalid Param -> 10001",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Expect PARAM_VALIDATION_FAILED', function () {",
+                  "  pm.expect(json.code).to.eql(10001);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"\",\n  \"contentMd\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/posts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "posts"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Follow Self -> 22001",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Expect FOLLOW_SELF_NOT_ALLOWED', function () {",
+                  "  pm.expect(json.code).to.eql(22001);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/follows/{{userAId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "follows",
+                "{{userAId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Post Detail Not Found -> 23001",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Expect POST_NOT_FOUND', function () {",
+                  "  pm.expect(json.code).to.eql(23001);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/posts/999999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "posts",
+                "999999999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reply Parent Mismatch -> 24004",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Expect COMMENT_PARENT_MISMATCH', function () {",
+                  "  pm.expect(json.code).to.eql(24004);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parentId\": 999999,\n  \"content\": \"mismatch\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/comments/{{commentId}}/reply",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "comments",
+                "{{commentId}}",
+                "reply"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Open Chat With Self -> 25001",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Expect CHAT_SELF_NOT_ALLOWED', function () {",
+                  "  pm.expect(json.code).to.eql(25001);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/threads/with/{{userAId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "chat",
+                "threads",
+                "with",
+                "{{userAId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Draft Detail Not Found -> 27001",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Expect DRAFT_NOT_FOUND', function () {",
+                  "  pm.expect(json.code).to.eql(27001);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/drafts/999999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "drafts",
+                "999999999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "History Delete Not Found -> 28001",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Expect HISTORY_NOT_FOUND', function () {",
+                  "  pm.expect(json.code).to.eql(28001);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/histories/999999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "histories",
+                "999999999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Complete Upload Object Missing -> 26010",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Expect FILE_OBJECT_NOT_FOUND', function () {",
+                  "  pm.expect(json.code).to.eql(26010);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bizType\": \"POST\",\n  \"bizId\": null,\n  \"bucketName\": \"{{bucketName}}\",\n  \"objectKey\": \"user/{{userAId}}/POST/20990101/not-exists.png\",\n  \"accessUrl\": \"{{minioEndpoint}}/{{bucketName}}/user/{{userAId}}/POST/20990101/not-exists.png\",\n  \"originalName\": \"not-exists.png\",\n  \"mimeType\": \"image/png\",\n  \"sizeBytes\": 12\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/files/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "files",
+                "complete"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Complete Upload Bucket Mismatch -> 26002",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Expect FILE_BUCKET_MISMATCH', function () {",
+                  "  pm.expect(json.code).to.eql(26002);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAAccessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bizType\": \"POST\",\n  \"bizId\": null,\n  \"bucketName\": \"wrong-bucket\",\n  \"objectKey\": \"{{objectKey}}\",\n  \"accessUrl\": \"{{fileAccessUrl}}\",\n  \"originalName\": \"bad.png\",\n  \"mimeType\": \"image/png\",\n  \"sizeBytes\": 12\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/files/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "files",
+                "complete"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "password",
+      "value": "12345678"
+    },
+    {
+      "key": "runId",
+      "value": ""
+    },
+    {
+      "key": "userAUsername",
+      "value": ""
+    },
+    {
+      "key": "userANickname",
+      "value": ""
+    },
+    {
+      "key": "userAId",
+      "value": ""
+    },
+    {
+      "key": "userAAccessToken",
+      "value": ""
+    },
+    {
+      "key": "userARefreshToken",
+      "value": ""
+    },
+    {
+      "key": "userBUsername",
+      "value": ""
+    },
+    {
+      "key": "userBNickname",
+      "value": ""
+    },
+    {
+      "key": "userBId",
+      "value": ""
+    },
+    {
+      "key": "userBAccessToken",
+      "value": ""
+    },
+    {
+      "key": "userBRefreshToken",
+      "value": ""
+    },
+    {
+      "key": "postId",
+      "value": ""
+    },
+    {
+      "key": "draftId",
+      "value": ""
+    },
+    {
+      "key": "historyId",
+      "value": ""
+    },
+    {
+      "key": "commentId",
+      "value": ""
+    },
+    {
+      "key": "notificationId",
+      "value": ""
+    },
+    {
+      "key": "threadId",
+      "value": ""
+    },
+    {
+      "key": "clientMsgId",
+      "value": ""
+    },
+    {
+      "key": "lastReadMessageId",
+      "value": "1"
+    },
+    {
+      "key": "bucketName",
+      "value": ""
+    },
+    {
+      "key": "objectKey",
+      "value": ""
+    },
+    {
+      "key": "uploadUrl",
+      "value": ""
+    },
+    {
+      "key": "uploadFilePath",
+      "value": "target/e2e-upload.png"
+    },
+    {
+      "key": "uploadFileSize",
+      "value": "67"
+    },
+    {
+      "key": "minioEndpoint",
+      "value": "http://127.0.0.1:9000"
+    },
+    {
+      "key": "fileAccessUrl",
+      "value": ""
+    },
+    {
+      "key": "fileId",
+      "value": ""
+    }
+  ]
+}
