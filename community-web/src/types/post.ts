@@ -1,3 +1,4 @@
+import type { FileObject } from './file'
 import type { PageQuery } from './api'
 import type { UserSummary } from './user'
 
@@ -11,6 +12,7 @@ export interface PostListItem {
   title: string
   excerpt: string
   coverUrl?: string
+  status: 'PUBLISHED' | 'HIDDEN'
   viewCount: number
   likeCount: number
   favoriteCount: number
@@ -18,6 +20,7 @@ export interface PostListItem {
   publishedAt: string
   author?: UserSummary
   tags: Tag[]
+  attachmentFiles: FileObject[]
   liked: boolean
   favorited: boolean
 }
@@ -27,6 +30,7 @@ export interface PostDetail extends Omit<PostListItem, 'excerpt'> {
   contentHtml?: string
   allowComment: number
   attachmentFileIds: number[]
+  attachmentFiles: FileObject[]
 }
 
 export interface PostQuery extends PageQuery {
@@ -44,3 +48,5 @@ export interface CreatePostPayload {
   tagIds?: number[]
   attachmentFileIds?: number[]
 }
+
+export interface UpdatePostPayload extends CreatePostPayload {}

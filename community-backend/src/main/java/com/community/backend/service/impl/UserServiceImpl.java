@@ -157,11 +157,15 @@ public class UserServiceImpl implements UserService {
     @Override
     public PageResponse<PostListItemVo> listUserPosts(Long userId, Long currentUserId, Long page, Long size) {
         mustGetUser(userId);
-        Page<Post> pager = postMapper.selectPage(new Page<>(page, size), new LambdaQueryWrapper<Post>()
+        LambdaQueryWrapper<Post> wrapper = new LambdaQueryWrapper<Post>()
                 .eq(Post::getAuthorId, userId)
                 .eq(Post::getIsDeleted, 0)
-                .eq(Post::getStatus, "PUBLISHED")
-                .orderByDesc(Post::getPublishedAt));
+                .orderByDesc(Post::getPublishedAt)
+                .orderByDesc(Post::getUpdatedAt);
+        if (!Objects.equals(userId, currentUserId)) {
+            wrapper.eq(Post::getStatus, "PUBLISHED");
+        }
+        Page<Post> pager = postMapper.selectPage(new Page<>(page, size), wrapper);
         return buildPostPageFromPosts(pager.getRecords(), pager.getCurrent(), pager.getSize(), pager.getTotal(), currentUserId);
     }
 
@@ -283,6 +287,7 @@ public class UserServiceImpl implements UserService {
             vo.setTitle(post.getTitle());
             vo.setExcerpt(post.getExcerpt());
             vo.setCoverUrl(post.getCoverUrl());
+            vo.setStatus(post.getStatus());
             vo.setViewCount(post.getViewCount());
             vo.setLikeCount(post.getLikeCount());
             vo.setFavoriteCount(post.getFavoriteCount());

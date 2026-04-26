@@ -4,6 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 /**
  * 保存草稿请求参数。
@@ -16,5 +18,7 @@ public class SaveDraftRequest {
 
     private String contentMd;
     private String coverUrl;
+    private List<Long> tagIds;
+    private List<Long> attachmentFileIds;
     private Boolean autoSave = Boolean.FALSE;
 }

@@ -1,5 +1,6 @@
 package com.community.backend.vo.post;
 
+import com.community.backend.vo.file.FileObjectVo;
 import com.community.backend.vo.user.UserSummaryVo;
 import lombok.Data;
 
@@ -16,6 +17,7 @@ public class PostListItemVo {
     private String title;
     private String excerpt;
     private String coverUrl;
+    private String status;
     private Integer viewCount;
     private Integer likeCount;
     private Integer favoriteCount;
@@ -23,6 +25,7 @@ public class PostListItemVo {
     private LocalDateTime publishedAt;
     private UserSummaryVo author;
     private List<TagVo> tags;
+    private List<FileObjectVo> attachmentFiles;
     private Boolean liked;
     private Boolean favorited;
 }

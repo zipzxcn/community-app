@@ -1,4 +1,6 @@
 import type { PageQuery } from './api'
+import type { FileObject } from './file'
+import type { Tag } from './post'
 
 export interface DraftItem {
   id: number
@@ -11,6 +13,10 @@ export interface DraftItem {
 
 export interface DraftDetail extends DraftItem {
   contentMd?: string
+  tagIds?: number[]
+  tags?: Tag[]
+  attachmentFileIds?: number[]
+  attachmentFiles?: FileObject[]
   status: string
   publishedPostId?: number
 }
@@ -21,5 +27,7 @@ export interface SaveDraftPayload {
   title: string
   contentMd?: string
   coverUrl?: string
+  tagIds?: number[]
+  attachmentFileIds?: number[]
   autoSave?: boolean
 }

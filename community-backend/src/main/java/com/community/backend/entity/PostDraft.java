@@ -26,6 +26,8 @@ public class PostDraft {
     private String title;
     private String contentMd;
     private String coverUrl;
+    private String tagIdsJson;
+    private String attachmentFileIdsJson;
     private String status;
     private Long publishedPostId;
     private LocalDateTime autoSavedAt;

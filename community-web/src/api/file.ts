@@ -10,6 +10,10 @@ export function completeUpload(payload: CompleteUploadPayload) {
   return client.post<never, FileObject>('/files/complete', payload)
 }
 
+export function deleteFile(fileId: number) {
+  return client.delete<never, void>(`/files/${fileId}`)
+}
+
 export async function uploadImageFile(file: File, bizType: string) {
   const token = await createUploadToken({
     bizType,

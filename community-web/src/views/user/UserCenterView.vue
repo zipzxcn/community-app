@@ -53,8 +53,29 @@
         </a-form>
 
         <template v-else-if="isPostTab">
+          <div v-if="activeTab === 'posts'" class="user-center__post-filter">
+            <a-radio-group v-model="postStatusFilter" type="button">
+              <a-radio value="ALL">全部</a-radio>
+              <a-radio value="PUBLISHED">已发布</a-radio>
+              <a-radio value="HIDDEN">已下架</a-radio>
+            </a-radio-group>
+          </div>
           <div v-if="currentPosts.length" class="user-center__post-list">
-            <PostCard v-for="post in currentPosts" :key="post.id" :post="post" />
+            <article v-for="post in currentPosts" :key="post.id" class="user-center__post-item">
+              <PostCard :post="post" />
+              <div v-if="activeTab === 'posts'" class="user-center__post-actions">
+                <a-tag :color="post.status === 'HIDDEN' ? 'orange' : 'green'">
+                  {{ post.status === 'HIDDEN' ? '已下架' : '已发布' }}
+                </a-tag>
+                <RouterLink v-if="post.status === 'PUBLISHED'" :to="`/posts/${post.id}/edit`">
+                  <a-button size="small">编辑</a-button>
+                </RouterLink>
+                <a-button size="small" @click="togglePostHidden(post)">
+                  {{ post.status === 'HIDDEN' ? '恢复上架' : '下架' }}
+                </a-button>
+                <a-button size="small" status="danger" @click="removePost(post.id)">删除</a-button>
+              </div>
+            </article>
           </div>
           <a-empty v-else description="暂无内容" />
           <div v-if="currentPage.total > currentPage.size" class="user-center__pager">
@@ -109,9 +130,10 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
-import { Message } from '@arco-design/web-vue'
+import { Message, Modal } from '@arco-design/web-vue'
 import PostCard from '@/components/post/PostCard.vue'
 import { fetchFollowers, fetchFollowing, fetchMutualFollows, followUser } from '@/api/follow'
+import { deletePost, hidePost } from '@/api/post'
 import { fetchUserFavorites, fetchUserLikes, fetchUserPosts, fetchUserProfile, updateMyProfile } from '@/api/user'
 import { uploadImageFile } from '@/api/file'
 import { useAuthStore } from '@/stores/auth'
@@ -126,6 +148,7 @@ const activeTab = ref<CenterTab>('profile')
 const loading = ref(false)
 const savingProfile = ref(false)
 const uploadingAvatar = ref(false)
+const postStatusFilter = ref<'ALL' | 'PUBLISHED' | 'HIDDEN'>('ALL')
 const myPosts = ref<PostListItem[]>([])
 const myFavorites = ref<PostListItem[]>([])
 const myLikes = ref<PostListItem[]>([])
@@ -155,7 +178,9 @@ const isPostTab = computed(() => ['posts', 'favorites', 'likes'].includes(active
 const currentPosts = computed(() => {
   if (activeTab.value === 'favorites') return myFavorites.value
   if (activeTab.value === 'likes') return myLikes.value
-  return myPosts.value
+  if (activeTab.value !== 'posts') return myPosts.value
+  if (postStatusFilter.value === 'ALL') return myPosts.value
+  return myPosts.value.filter((post) => post.status === postStatusFilter.value)
 })
 const currentPage = computed(() => {
   if (activeTab.value === 'favorites') return favoritePage
@@ -319,6 +344,39 @@ async function followBack(userId: number) {
   }
 }
 
+function togglePostHidden(post: PostListItem) {
+  const nextHidden = post.status !== 'HIDDEN'
+  Modal.confirm({
+    title: nextHidden ? '下架帖子' : '恢复上架',
+    content: nextHidden ? '下架后公开列表将不可见。' : '恢复上架后帖子会重新公开。',
+    async onOk() {
+      try {
+        await hidePost(post.id, nextHidden)
+        Message.success(nextHidden ? '帖子已下架' : '帖子已恢复上架')
+        await loadPosts('posts')
+      } catch (error) {
+        Message.error(error instanceof Error ? error.message : '帖子状态更新失败')
+      }
+    },
+  })
+}
+
+function removePost(postId: number) {
+  Modal.confirm({
+    title: '删除帖子',
+    content: '删除后帖子将从列表移除。',
+    async onOk() {
+      try {
+        await deletePost(postId)
+        Message.success('帖子已删除')
+        await loadPosts('posts')
+      } catch (error) {
+        Message.error(error instanceof Error ? error.message : '删除失败')
+      }
+    },
+  })
+}
+
 async function handleTabChange(key: string | number) {
   const tab = String(key) as CenterTab
   activeTab.value = tab
@@ -460,6 +518,22 @@ loadPosts('posts')
   display: grid;
   gap: 14px;
   margin-top: 14px;
+}
+
+.user-center__post-filter {
+  margin-top: 14px;
+}
+
+.user-center__post-item {
+  display: grid;
+  gap: 10px;
+}
+
+.user-center__post-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 }
 
 .user-center__user-item {

@@ -40,6 +40,24 @@ class UserApiIT extends SupportApiTest {
         Assertions.assertEquals(20001, unauthorized.path("code").asInt());
     }
 
+    @Test
+    void shouldExposeHiddenPostsOnlyToOwner() throws Exception {
+        Session author = createAndLogin("it_user_hidden_author");
+        Long postId = createPost(author.accessToken(), "隐藏帖子", "用于隐藏列表回归");
+
+        JsonNode hide = patchJson("/api/v1/posts/" + postId + "/hide", Map.of("hidden", true), author.accessToken());
+        assertOk(hide);
+
+        JsonNode ownerPosts = getJson("/api/v1/users/" + author.userId() + "/posts?page=1&size=20", author.accessToken());
+        assertOk(ownerPosts);
+        Assertions.assertTrue(containsPost(ownerPosts.path("data").path("list"), postId));
+        Assertions.assertEquals("HIDDEN", ownerPosts.path("data").path("list").get(0).path("status").asText());
+
+        JsonNode guestPosts = getJson("/api/v1/users/" + author.userId() + "/posts?page=1&size=20", null);
+        assertOk(guestPosts);
+        Assertions.assertFalse(containsPost(guestPosts.path("data").path("list"), postId));
+    }
+
     /**
      * 判断分页列表中是否包含目标 postId。
      */

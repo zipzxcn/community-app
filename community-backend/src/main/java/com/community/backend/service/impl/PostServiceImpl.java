@@ -27,6 +27,7 @@ import com.community.backend.mapper.PostTagRelMapper;
 import com.community.backend.mapper.TagMapper;
 import com.community.backend.service.NotificationService;
 import com.community.backend.service.PostService;
+import com.community.backend.vo.file.FileObjectVo;
 import com.community.backend.vo.post.PostDetailVo;
 import com.community.backend.vo.post.PostListItemVo;
 import com.community.backend.vo.post.TagVo;
@@ -211,6 +212,7 @@ public class PostServiceImpl implements PostService {
             vo.setTitle(post.getTitle());
             vo.setExcerpt(post.getExcerpt());
             vo.setCoverUrl(post.getCoverUrl());
+            vo.setStatus(post.getStatus());
             vo.setViewCount(post.getViewCount());
             vo.setLikeCount(post.getLikeCount());
             vo.setFavoriteCount(post.getFavoriteCount());
@@ -218,6 +220,7 @@ public class PostServiceImpl implements PostService {
             vo.setPublishedAt(post.getPublishedAt());
             vo.setAuthor(authorMap.get(post.getAuthorId()));
             vo.setTags(tagMap.getOrDefault(post.getId(), Collections.emptyList()));
+            vo.setAttachmentFiles(loadAttachmentFiles(post.getId()));
             vo.setLiked(likedSet.contains(post.getId()));
             vo.setFavorited(favoritedSet.contains(post.getId()));
             return vo;
@@ -245,6 +248,7 @@ public class PostServiceImpl implements PostService {
         vo.setContentMd(post.getContentMd());
         vo.setContentHtml(post.getContentHtml());
         vo.setCoverUrl(post.getCoverUrl());
+        vo.setStatus(post.getStatus());
         vo.setAllowComment(post.getAllowComment());
         vo.setViewCount(post.getViewCount());
         vo.setLikeCount(post.getLikeCount());
@@ -254,6 +258,7 @@ public class PostServiceImpl implements PostService {
         vo.setAuthor(loadAuthorMap(List.of(post.getAuthorId())).get(post.getAuthorId()));
         vo.setTags(loadTagMapByPostIds(List.of(postId)).getOrDefault(postId, Collections.emptyList()));
         vo.setAttachmentFileIds(loadAttachmentFileIds(postId));
+        vo.setAttachmentFiles(loadAttachmentFiles(postId));
         vo.setLiked(loadLikedPostSet(currentUserId, List.of(postId)).contains(postId));
         vo.setFavorited(loadFavoritedPostSet(currentUserId, List.of(postId)).contains(postId));
         return vo;
@@ -742,6 +747,30 @@ public class PostServiceImpl implements PostService {
                         .orderByAsc(FileObject::getSortOrder))
                 .stream()
                 .map(FileObject::getId)
+                .toList();
+    }
+
+    /**
+     * 加载帖子附件文件信息，供前端编辑和预览。
+     */
+    private List<FileObjectVo> loadAttachmentFiles(Long postId) {
+        return fileObjectMapper.selectList(new LambdaQueryWrapper<FileObject>()
+                        .eq(FileObject::getBizType, "POST")
+                        .eq(FileObject::getBizId, postId)
+                        .eq(FileObject::getStatus, "BOUND")
+                        .orderByAsc(FileObject::getSortOrder))
+                .stream()
+                .map(file -> {
+                    FileObjectVo vo = new FileObjectVo();
+                    vo.setId(file.getId());
+                    vo.setAccessUrl(file.getAccessUrl());
+                    vo.setOriginalName(file.getOriginalName());
+                    vo.setMimeType(file.getMimeType());
+                    vo.setSizeBytes(file.getSizeBytes());
+                    vo.setBizType(file.getBizType());
+                    vo.setBizId(file.getBizId());
+                    return vo;
+                })
                 .toList();
     }
 
