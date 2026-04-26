@@ -5,7 +5,7 @@
         <h2>{{ post.title }}</h2>
         <p>{{ post.excerpt || '作者暂未填写摘要，打开详情查看完整内容。' }}</p>
       </div>
-      <img v-if="post.coverUrl" :src="post.coverUrl" alt="" class="post-card__cover" />
+      <img v-if="post.coverUrl" :src="resolveAssetUrl(post.coverUrl)" alt="" class="post-card__cover" />
     </RouterLink>
 
     <div class="post-card__meta">
@@ -24,7 +24,7 @@
 
 <script setup lang="ts">
 import type { PostListItem } from '@/types/post'
-import { compactNumber, formatDateTime } from '@/utils/format'
+import { compactNumber, formatDateTime, resolveAssetUrl } from '@/utils/format'
 
 defineProps<{
   post: PostListItem

@@ -55,6 +55,10 @@ export const useAuthStore = defineStore('auth', {
       this.userInfo = data.userInfo
       this.persist()
     },
+    setUserInfo(userInfo: CurrentUser) {
+      this.userInfo = userInfo
+      this.persist()
+    },
     async login(payload: LoginPayload) {
       const result = await login(payload)
       this.setLogin(result)

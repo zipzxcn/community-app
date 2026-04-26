@@ -5,17 +5,26 @@ import com.community.backend.dto.file.CompleteUploadRequest;
 import com.community.backend.dto.file.UploadTokenRequest;
 import com.community.backend.security.SecurityUtils;
 import com.community.backend.service.FileService;
+import com.community.backend.vo.file.FileDownloadVo;
 import com.community.backend.vo.file.FileObjectVo;
 import com.community.backend.vo.file.UploadTokenVo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.CacheControl;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.Duration;
 
 /**
  * 文件控制器：上传凭证、上传完成回写与删除文件。
@@ -51,6 +60,25 @@ public class FileController {
         // 写入或更新文件元数据
         Long currentUserId = SecurityUtils.requireUserId();
         return ApiResponse.success(fileService.completeUpload(currentUserId, request));
+    }
+
+    /**
+     * 公开文件访问代理：用于头像、封面等浏览器直接回显，避免依赖对象存储桶公开策略。
+     */
+    @Operation(summary = "公开读取文件", description = "通过后端代理读取文件内容")
+    @GetMapping("/public/{fileId}")
+    public ResponseEntity<InputStreamResource> publicFile(@PathVariable Long fileId) {
+        FileDownloadVo download = fileService.loadPublicFile(fileId);
+        MediaType mediaType = StringUtils.hasText(download.contentType())
+                ? MediaType.parseMediaType(download.contentType())
+                : MediaType.APPLICATION_OCTET_STREAM;
+        ResponseEntity.BodyBuilder builder = ResponseEntity.ok()
+                .contentType(mediaType)
+                .cacheControl(CacheControl.maxAge(Duration.ofDays(7)).cachePublic());
+        if (download.contentLength() != null && download.contentLength() >= 0) {
+            builder.contentLength(download.contentLength());
+        }
+        return builder.body(new InputStreamResource(download.inputStream()));
     }
 
     /**

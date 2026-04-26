@@ -12,4 +12,6 @@ public interface FollowService {
     PageResponse<FollowUserVo> listFollowing(Long currentUserId, Long page, Long size);
 
     PageResponse<FollowUserVo> listFollowers(Long currentUserId, Long page, Long size);
+
+    PageResponse<FollowUserVo> listMutual(Long currentUserId, Long page, Long size);
 }

@@ -33,6 +33,23 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
+          path: 'users/search',
+          name: 'user-search',
+          component: () => import('@/views/user/UserSearchView.vue'),
+        },
+        {
+          path: 'users/:userId',
+          name: 'user-profile',
+          component: () => import('@/views/user/UserProfileView.vue'),
+          props: (route) => ({ userId: Number(route.params.userId) }),
+        },
+        {
+          path: 'me',
+          name: 'me-center',
+          component: () => import('@/views/user/UserCenterView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
           path: 'login',
           name: 'login',
           component: () => import('@/views/auth/LoginView.vue'),

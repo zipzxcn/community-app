@@ -21,3 +21,17 @@ export function compactNumber(value?: number) {
   }
   return String(count)
 }
+
+export function resolveAssetUrl(value?: string) {
+  if (!value) {
+    return ''
+  }
+  if (/^https?:\/\//i.test(value) || value.startsWith('data:') || value.startsWith('blob:')) {
+    return value
+  }
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1'
+  if (/^https?:\/\//i.test(apiBaseUrl)) {
+    return new URL(value, apiBaseUrl).toString()
+  }
+  return new URL(value, window.location.origin).toString()
+}

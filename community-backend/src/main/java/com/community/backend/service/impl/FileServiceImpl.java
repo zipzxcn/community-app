@@ -10,8 +10,10 @@ import com.community.backend.dto.file.UploadTokenRequest;
 import com.community.backend.entity.FileObject;
 import com.community.backend.mapper.FileObjectMapper;
 import com.community.backend.service.FileService;
+import com.community.backend.vo.file.FileDownloadVo;
 import com.community.backend.vo.file.FileObjectVo;
 import com.community.backend.vo.file.UploadTokenVo;
+import io.minio.GetObjectArgs;
 import io.minio.BucketExistsArgs;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MakeBucketArgs;
@@ -115,7 +117,7 @@ public class FileServiceImpl implements FileService {
                     .storageProvider(storageProperties.getProvider().toUpperCase(Locale.ROOT))
                     .bucketName(request.getBucketName())
                     .objectKey(request.getObjectKey())
-                    .accessUrl(request.getAccessUrl())
+                    .accessUrl("")
                     .originalName(request.getOriginalName())
                     .ext(extractExt(request.getOriginalName()))
                     .mimeType(request.getMimeType())
@@ -126,15 +128,21 @@ public class FileServiceImpl implements FileService {
                     .status(status)
                     .build();
             fileObjectMapper.insert(created);
+            String stableAccessUrl = buildPublicAccessUrl(created.getId());
+            fileObjectMapper.update(null, new LambdaUpdateWrapper<FileObject>()
+                    .eq(FileObject::getId, created.getId())
+                    .set(FileObject::getAccessUrl, stableAccessUrl));
+            created.setAccessUrl(stableAccessUrl);
             return toVo(created);
         }
 
         if (!currentUserId.equals(existing.getUploaderId())) {
             throw BizException.of(ErrorCode.FILE_NOT_OWNER);
         }
+        String stableAccessUrl = buildPublicAccessUrl(existing.getId());
         fileObjectMapper.update(null, new LambdaUpdateWrapper<FileObject>()
                 .eq(FileObject::getId, existing.getId())
-                .set(FileObject::getAccessUrl, request.getAccessUrl())
+                .set(FileObject::getAccessUrl, stableAccessUrl)
                 .set(FileObject::getOriginalName, request.getOriginalName())
                 .set(FileObject::getExt, extractExt(request.getOriginalName()))
                 .set(FileObject::getMimeType, request.getMimeType())
@@ -144,6 +152,38 @@ public class FileServiceImpl implements FileService {
                 .set(FileObject::getStatus, status));
         FileObject refreshed = fileObjectMapper.selectById(existing.getId());
         return toVo(refreshed);
+    }
+
+    /**
+     * 公开文件代理读取：返回后端稳定地址背后的真实文件流。
+     */
+    @Override
+    public FileDownloadVo loadPublicFile(Long fileId) {
+        FileObject file = fileObjectMapper.selectById(fileId);
+        if (file == null || "DELETED".equalsIgnoreCase(file.getStatus())) {
+            throw BizException.of(ErrorCode.FILE_NOT_FOUND_OR_FORBIDDEN);
+        }
+        if ("minio".equalsIgnoreCase(storageProperties.getProvider())) {
+            try {
+                MinioClient minioClient = requiredMinioClient();
+                return new FileDownloadVo(
+                        file.getMimeType(),
+                        file.getSizeBytes(),
+                        file.getOriginalName(),
+                        minioClient.getObject(GetObjectArgs.builder()
+                                .bucket(file.getBucketName())
+                                .object(file.getObjectKey())
+                                .build())
+                );
+            } catch (Exception ex) {
+                throw BizException.of(
+                        ErrorCode.FILE_OBJECT_NOT_FOUND,
+                        ErrorCode.FILE_OBJECT_NOT_FOUND.getDefaultMessage() + ": " + ex.getMessage(),
+                        ex
+                );
+            }
+        }
+        throw BizException.of(ErrorCode.STORAGE_PROVIDER_UNSUPPORTED);
     }
 
     /**
@@ -282,6 +322,13 @@ public class FileServiceImpl implements FileService {
         String uuid = UUID.randomUUID().toString().replace("-", "");
         String suffix = StringUtils.hasText(ext) ? "." + ext : "";
         return "user/" + userId + "/" + normalizedBiz + "/" + date + "/" + uuid + suffix;
+    }
+
+    /**
+     * 统一生成经由后端代理的稳定访问地址，避免浏览器直接访问私有桶对象。
+     */
+    private String buildPublicAccessUrl(Long fileId) {
+        return "/api/v1/files/public/" + fileId;
     }
 
     /**

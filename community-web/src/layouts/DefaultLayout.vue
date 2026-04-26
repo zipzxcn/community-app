@@ -4,8 +4,10 @@
       <RouterLink class="default-layout__brand" to="/">Community</RouterLink>
       <nav class="default-layout__nav">
         <RouterLink to="/">首页</RouterLink>
+        <RouterLink to="/users/search">找人</RouterLink>
         <RouterLink v-if="authStore.isLoggedIn" to="/posts/publish">发布</RouterLink>
         <RouterLink v-if="authStore.isLoggedIn" to="/drafts">草稿箱</RouterLink>
+        <RouterLink v-if="authStore.isLoggedIn" to="/me">我的</RouterLink>
         <template v-if="authStore.isLoggedIn">
           <span class="default-layout__user">{{ authStore.userInfo?.nickname || authStore.userInfo?.username }}</span>
           <a-button size="mini" @click="handleLogout">退出</a-button>

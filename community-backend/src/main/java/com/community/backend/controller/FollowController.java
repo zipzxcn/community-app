@@ -70,4 +70,15 @@ public class FollowController {
         Long currentUserId = SecurityUtils.requireUserId();
         return ApiResponse.success(followService.listFollowers(currentUserId, page, size));
     }
+
+    /**
+     * 我的互关列表。
+     */
+    @GetMapping("/mutual")
+    public ApiResponse<PageResponse<FollowUserVo>> mutual(
+            @RequestParam(defaultValue = "1") @Min(1) Long page,
+            @RequestParam(defaultValue = "20") @Min(1) Long size) {
+        Long currentUserId = SecurityUtils.requireUserId();
+        return ApiResponse.success(followService.listMutual(currentUserId, page, size));
+    }
 }

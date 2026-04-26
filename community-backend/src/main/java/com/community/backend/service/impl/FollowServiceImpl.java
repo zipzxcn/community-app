@@ -177,6 +177,77 @@ public class FollowServiceImpl implements FollowService {
     }
 
     /**
+     * 查询我的互关列表（我关注了 ta，ta 也关注了我）。
+     */
+    @Override
+    public PageResponse<FollowUserVo> listMutual(Long currentUserId, Long page, Long size) {
+        List<UserFollow> followingAll = userFollowMapper.selectList(new LambdaQueryWrapper<UserFollow>()
+                .eq(UserFollow::getFollowerId, currentUserId)
+                .eq(UserFollow::getStatus, "ACTIVE")
+                .orderByDesc(UserFollow::getUpdatedAt));
+        if (followingAll.isEmpty()) {
+            return PageResponse.<FollowUserVo>builder()
+                    .list(Collections.emptyList())
+                    .page(page)
+                    .size(size)
+                    .total(0L)
+                    .hasMore(Boolean.FALSE)
+                    .build();
+        }
+
+        List<Long> followingIds = followingAll.stream().map(UserFollow::getFolloweeId).toList();
+        Set<Long> mutualSet = loadMutualSet(currentUserId, followingIds);
+        List<Long> mutualOrderedIds = followingAll.stream()
+                .map(UserFollow::getFolloweeId)
+                .filter(mutualSet::contains)
+                .toList();
+        long total = mutualOrderedIds.size();
+        if (total == 0) {
+            return PageResponse.<FollowUserVo>builder()
+                    .list(Collections.emptyList())
+                    .page(page)
+                    .size(size)
+                    .total(0L)
+                    .hasMore(Boolean.FALSE)
+                    .build();
+        }
+
+        // 基于互关有序列表做分页，确保返回顺序稳定且不受 SQL 方言影响。
+        int from = (int) Math.max((page - 1) * size, 0);
+        if (from >= mutualOrderedIds.size()) {
+            return PageResponse.<FollowUserVo>builder()
+                    .list(Collections.emptyList())
+                    .page(page)
+                    .size(size)
+                    .total(total)
+                    .hasMore(Boolean.FALSE)
+                    .build();
+        }
+        int to = (int) Math.min(from + size, mutualOrderedIds.size());
+        List<Long> pageIds = mutualOrderedIds.subList(from, to);
+        Map<Long, AppUser> userMap = loadUserMap(pageIds);
+
+        List<FollowUserVo> list = pageIds.stream()
+                .map(userMap::get)
+                .filter(user -> user != null)
+                .map(user -> {
+                    FollowUserVo vo = toVo(user);
+                    vo.setFollowedByMe(Boolean.TRUE);
+                    vo.setMutualFollow(Boolean.TRUE);
+                    return vo;
+                })
+                .toList();
+
+        return PageResponse.<FollowUserVo>builder()
+                .list(list)
+                .page(page)
+                .size(size)
+                .total(total)
+                .hasMore(page * size < total)
+                .build();
+    }
+
+    /**
      * 校验目标用户是否存在且可被关注。
      */
     private void mustGetActiveUser(Long userId) {
