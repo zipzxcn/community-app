@@ -14,6 +14,15 @@
       </div>
     </div>
 
+    <a-alert
+      v-if="!chatStore.connected"
+      class="chat-view__status-alert"
+      type="warning"
+      show-icon
+    >
+      当前实时通道未连接，页面仍可通过 REST 刷新继续聊天；连接恢复后会自动同步新消息。
+    </a-alert>
+
     <div class="chat-view__body">
       <a-card :bordered="false" class="chat-view__threads">
         <div class="chat-view__panel-head">
@@ -41,6 +50,7 @@
                   <strong>{{ item.peerUser.nickname || item.peerUser.username }}</strong>
                   <span>{{ formatDateTime(item.lastMessageAt) }}</span>
                 </div>
+                <small>@{{ item.peerUser.username }}</small>
                 <p>{{ item.lastMessagePreview || '还没有聊天，先打个招呼吧。' }}</p>
               </div>
               <div class="chat-view__thread-side">
@@ -107,8 +117,16 @@
               @keydown.enter.exact.prevent="handleEnterSend"
             />
             <div class="chat-view__composer-actions">
-              <span v-if="activeThread.status !== 'ACTIVE'">已非互关，当前会话只读</span>
-              <a-button type="primary" :disabled="activeThread.status !== 'ACTIVE'" :loading="sending" @click="submitMessage">
+              <span>
+                <template v-if="activeThread.status !== 'ACTIVE'">已非互关，当前会话只读</template>
+                <template v-else>{{ draft.trim().length }}/5000</template>
+              </span>
+              <a-button
+                type="primary"
+                :disabled="activeThread.status !== 'ACTIVE' || !draft.trim()"
+                :loading="sending"
+                @click="submitMessage"
+              >
                 发送消息
               </a-button>
             </div>
@@ -454,6 +472,10 @@ onUnmounted(() => {
   gap: 20px;
 }
 
+.chat-view__status-alert {
+  border-radius: 16px;
+}
+
 .chat-view__hero {
   display: flex;
   align-items: flex-end;
@@ -592,6 +614,13 @@ onUnmounted(() => {
   margin: 0;
 }
 
+.chat-view__thread-main small {
+  display: block;
+  margin-top: 6px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
 .chat-view__thread-head strong {
   color: #172033;
 }
@@ -637,6 +666,7 @@ onUnmounted(() => {
   height: 440px;
   padding: 6px 2px;
   overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .chat-view__message-item {
@@ -651,9 +681,10 @@ onUnmounted(() => {
 .chat-view__message-bubble {
   max-width: min(78%, 540px);
   padding: 14px 16px;
-  background: #f8fafc;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 18px 18px 18px 6px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.05);
 }
 
 .chat-view__message-item.is-self .chat-view__message-bubble {
@@ -688,6 +719,8 @@ onUnmounted(() => {
   display: grid;
   gap: 10px;
   margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .chat-view__composer-actions {

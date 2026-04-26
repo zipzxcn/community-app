@@ -1,15 +1,31 @@
 <template>
   <section class="user-center">
     <div class="user-center__hero">
-      <div class="user-center__profile">
-        <a-avatar :size="68" class="user-center__avatar">
-          <img v-if="profileForm.avatarUrl" :src="resolveAssetUrl(profileForm.avatarUrl)" alt="" />
-          <template v-else>{{ avatarText }}</template>
-        </a-avatar>
-        <div>
-          <p class="user-center__eyebrow">Personal Hub</p>
-          <h1>{{ displayName }}</h1>
-          <p>{{ profileForm.bio || '完善资料后，其他用户能更快了解你。' }}</p>
+      <div class="user-center__hero-main">
+        <div class="user-center__profile">
+          <a-avatar :size="68" class="user-center__avatar">
+            <img v-if="profileForm.avatarUrl" :src="resolveAssetUrl(profileForm.avatarUrl)" alt="" />
+            <template v-else>{{ avatarText }}</template>
+          </a-avatar>
+          <div>
+            <p class="user-center__eyebrow">Personal Hub</p>
+            <h1>{{ displayName }}</h1>
+            <p>{{ profileForm.bio || '完善资料后，其他用户能更快了解你。' }}</p>
+          </div>
+        </div>
+        <div class="user-center__hero-cards">
+          <article>
+            <strong>{{ profileStats.postCount }}</strong>
+            <span>我的帖子</span>
+          </article>
+          <article>
+            <strong>{{ profileStats.followingCount }}</strong>
+            <span>我的关注</span>
+          </article>
+          <article>
+            <strong>{{ profileStats.followerCount }}</strong>
+            <span>我的粉丝</span>
+          </article>
         </div>
       </div>
       <div class="user-center__stats">
@@ -32,6 +48,12 @@
 
       <a-spin :loading="loading">
         <a-form v-if="activeTab === 'profile'" :model="profileForm" layout="vertical" class="user-center__form">
+          <div class="user-center__form-head">
+            <div>
+              <p>资料设置</p>
+              <h2>维护你的昵称、头像和个人简介</h2>
+            </div>
+          </div>
           <a-form-item field="nickname" label="昵称">
             <a-input v-model="profileForm.nickname" :max-length="32" show-word-limit />
           </a-form-item>
@@ -565,6 +587,12 @@ onMounted(async () => {
   border-radius: 22px;
 }
 
+.user-center__hero-main {
+  display: grid;
+  gap: 18px;
+  flex: 1;
+}
+
 .user-center__profile {
   display: flex;
   align-items: center;
@@ -595,6 +623,36 @@ onMounted(async () => {
   color: #64748b;
 }
 
+.user-center__hero-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 720px;
+}
+
+.user-center__hero-cards article {
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 16px;
+}
+
+.user-center__hero-cards strong,
+.user-center__hero-cards span {
+  display: block;
+}
+
+.user-center__hero-cards strong {
+  color: #172033;
+  font-size: 20px;
+}
+
+.user-center__hero-cards span {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 13px;
+}
+
 .user-center__stats {
   display: flex;
   flex-wrap: wrap;
@@ -617,6 +675,22 @@ onMounted(async () => {
 .user-center__form {
   max-width: 680px;
   margin-top: 12px;
+}
+
+.user-center__form-head p,
+.user-center__form-head h2 {
+  margin: 0;
+}
+
+.user-center__form-head p {
+  color: #0f766e;
+  font-weight: 800;
+}
+
+.user-center__form-head h2 {
+  margin-top: 6px;
+  color: #172033;
+  font-size: 24px;
 }
 
 .user-center__avatar-editor {
@@ -719,11 +793,22 @@ onMounted(async () => {
 .user-center__user-item {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 14px;
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 8px;
+  border-radius: 16px;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.user-center__user-item:hover {
+  transform: translateY(-1px);
+  border-color: rgba(15, 118, 110, 0.14);
+  box-shadow: 0 16px 44px rgba(15, 23, 42, 0.06);
 }
 
 .user-center__user-main {
@@ -759,6 +844,10 @@ onMounted(async () => {
   }
 
   .user-center__avatar-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .user-center__hero-cards {
     grid-template-columns: 1fr;
   }
 

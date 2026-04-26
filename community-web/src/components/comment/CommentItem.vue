@@ -131,6 +131,10 @@ function submitReply() {
 .comment-item__body {
   display: flex;
   gap: 12px;
+  padding: 14px 14px 12px;
+  background: rgba(248, 250, 252, 0.9);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 18px;
 }
 
 .comment-item__avatar {
@@ -146,6 +150,7 @@ function submitReply() {
 
 .comment-item__top {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: center;
   color: #64748b;
@@ -168,6 +173,7 @@ function submitReply() {
 
 .comment-item__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
 }
 
@@ -189,5 +195,16 @@ function submitReply() {
   margin-left: 48px;
   padding-left: 16px;
   border-left: 2px solid rgba(15, 118, 110, 0.12);
+}
+
+@media (max-width: 720px) {
+  .comment-item__body {
+    padding: 12px;
+  }
+
+  .comment-item__children {
+    margin-left: 18px;
+    padding-left: 12px;
+  }
 }
 </style>

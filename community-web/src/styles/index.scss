@@ -11,6 +11,23 @@ body,
     sans-serif;
 }
 
+body {
+  color: #172033;
+  background:
+    radial-gradient(circle at top left, rgba(15, 118, 110, 0.06), transparent 28%),
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.06), transparent 24%),
+    #f8fafc;
+}
+
 * {
   box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  color: #fff;
+  background: rgba(15, 118, 110, 0.72);
 }

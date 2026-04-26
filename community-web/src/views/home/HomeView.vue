@@ -1,25 +1,53 @@
 <template>
   <section class="home-view">
     <div class="home-view__hero">
-      <div>
+      <div class="home-view__hero-main">
         <p class="home-view__eyebrow">Community MVP</p>
         <h1>发现帖子，加入讨论</h1>
         <p>当前先接入一期后端已完成的帖子列表、搜索、排序、详情与互动接口。</p>
+        <div class="home-view__hero-stats">
+          <article>
+            <strong>{{ page.total }}</strong>
+            <span>帖子总量</span>
+          </article>
+          <article>
+            <strong>{{ query.sort === 'hot' ? '热度优先' : '最新优先' }}</strong>
+            <span>当前排序</span>
+          </article>
+          <article>
+            <strong>{{ authStore.isLoggedIn ? '已登录' : '游客模式' }}</strong>
+            <span>当前身份</span>
+          </article>
+        </div>
       </div>
-      <RouterLink v-if="authStore.isLoggedIn" to="/posts/publish">
-        <a-button type="primary" size="large">发布帖子</a-button>
-      </RouterLink>
-      <RouterLink v-else to="/login">
-        <a-button type="primary" size="large">登录后发布</a-button>
-      </RouterLink>
+
+      <div class="home-view__hero-actions">
+        <RouterLink v-if="authStore.isLoggedIn" to="/posts/publish">
+          <a-button type="primary" size="large">发布帖子</a-button>
+        </RouterLink>
+        <RouterLink v-else to="/login">
+          <a-button type="primary" size="large">登录后发布</a-button>
+        </RouterLink>
+        <RouterLink to="/users/search">
+          <a-button size="large">去找人</a-button>
+        </RouterLink>
+      </div>
     </div>
 
     <a-card :bordered="false" class="home-view__filters">
-      <a-input-search v-model="query.keyword" placeholder="搜索标题或摘要" allow-clear @search="reload" @press-enter="reload" />
-      <a-select v-model="query.sort" class="home-view__sort" @change="reload">
-        <a-option value="latest">最新发布</a-option>
-        <a-option value="hot">热门优先</a-option>
-      </a-select>
+      <div class="home-view__filters-main">
+        <div>
+          <p>内容筛选</p>
+          <h2>按关键词和排序快速浏览帖子</h2>
+        </div>
+        <div class="home-view__filter-controls">
+          <a-input-search v-model="query.keyword" placeholder="搜索标题或摘要" allow-clear @search="reload" @press-enter="reload" />
+          <a-select v-model="query.sort" class="home-view__sort" @change="reload">
+            <a-option value="latest">最新发布</a-option>
+            <a-option value="hot">热门优先</a-option>
+          </a-select>
+        </div>
+      </div>
     </a-card>
 
     <a-spin :loading="loading">
@@ -102,7 +130,7 @@ onMounted(loadPosts)
 
 .home-view__hero {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: space-between;
   gap: 20px;
   padding: 34px;
@@ -112,6 +140,11 @@ onMounted(loadPosts)
     rgba(255, 255, 255, 0.78);
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 32px;
+}
+
+.home-view__hero-main {
+  display: grid;
+  gap: 18px;
 }
 
 .home-view__eyebrow {
@@ -135,12 +168,81 @@ onMounted(loadPosts)
   line-height: 1.8;
 }
 
+.home-view__hero-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 720px;
+}
+
+.home-view__hero-stats article,
+.home-view__filters {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.06);
+}
+
+.home-view__hero-stats article {
+  padding: 16px;
+  border-radius: 18px;
+}
+
+.home-view__hero-stats strong,
+.home-view__hero-stats span {
+  display: block;
+}
+
+.home-view__hero-stats strong {
+  color: #172033;
+  font-size: 18px;
+}
+
+.home-view__hero-stats span {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.home-view__hero-actions {
+  display: grid;
+  align-content: center;
+  gap: 12px;
+}
+
+.home-view__filters {
+  border-radius: 24px;
+}
+
 .home-view__filters {
   :deep(.arco-card-body) {
-    display: grid;
-    grid-template-columns: 1fr 160px;
-    gap: 12px;
+    padding: 22px;
   }
+}
+
+.home-view__filters-main {
+  display: grid;
+  gap: 16px;
+}
+
+.home-view__filters-main p,
+.home-view__filters-main h2 {
+  margin: 0;
+}
+
+.home-view__filters-main p {
+  color: #0f766e;
+  font-weight: 800;
+}
+
+.home-view__filters-main h2 {
+  color: #172033;
+  font-size: 24px;
+}
+
+.home-view__filter-controls {
+  display: grid;
+  grid-template-columns: 1fr 180px;
+  gap: 12px;
 }
 
 .home-view__list {
@@ -160,9 +262,14 @@ onMounted(loadPosts)
     padding: 24px;
   }
 
+  .home-view__hero-stats,
+  .home-view__filter-controls {
+    grid-template-columns: 1fr;
+  }
+
   .home-view__filters {
     :deep(.arco-card-body) {
-      grid-template-columns: 1fr;
+      padding: 18px;
     }
   }
 }

@@ -1,40 +1,63 @@
 <template>
   <div class="default-layout">
     <header class="default-layout__header">
-      <RouterLink class="default-layout__brand" to="/">Community</RouterLink>
-      <nav class="default-layout__nav">
-        <RouterLink to="/">首页</RouterLink>
-        <RouterLink to="/users/search">找人</RouterLink>
-        <RouterLink v-if="authStore.isLoggedIn" to="/posts/publish">发布</RouterLink>
-        <RouterLink v-if="authStore.isLoggedIn" to="/drafts">草稿箱</RouterLink>
-        <RouterLink v-if="authStore.isLoggedIn" to="/histories">历史</RouterLink>
-        <RouterLink v-if="authStore.isLoggedIn" to="/chat" class="default-layout__notice-link">
-          聊天
-          <span v-if="notificationStore.unread.chatCount > 0" class="default-layout__notice-badge">
-            {{ notificationStore.unread.chatCount > 99 ? '99+' : notificationStore.unread.chatCount }}
+      <div class="default-layout__brand-group">
+        <RouterLink class="default-layout__brand" to="/">
+          <span class="default-layout__brand-mark">C</span>
+          <span>
+            <strong>Community</strong>
+            <small>一期 MVP</small>
           </span>
         </RouterLink>
-        <RouterLink v-if="authStore.isLoggedIn" to="/notifications" class="default-layout__notice-link">
-          通知
-          <span v-if="notificationStore.unread.total > 0" class="default-layout__notice-badge">
-            {{ notificationStore.unread.total > 99 ? '99+' : notificationStore.unread.total }}
-          </span>
-        </RouterLink>
-        <RouterLink v-if="authStore.isLoggedIn" to="/me">我的</RouterLink>
-        <template v-if="authStore.isLoggedIn">
-          <span class="default-layout__user">{{ authStore.userInfo?.nickname || authStore.userInfo?.username }}</span>
-          <a-button size="mini" @click="handleLogout">退出</a-button>
-        </template>
-        <template v-else>
-          <RouterLink to="/login">登录</RouterLink>
-          <RouterLink to="/register">注册</RouterLink>
-        </template>
-      </nav>
+        <p class="default-layout__slogan">登录、发帖、互动、通知、私信的一期闭环已打通。</p>
+      </div>
+
+      <div class="default-layout__actions">
+        <nav class="default-layout__nav">
+          <RouterLink to="/">首页</RouterLink>
+          <RouterLink to="/users/search">找人</RouterLink>
+          <RouterLink v-if="authStore.isLoggedIn" to="/posts/publish">发布</RouterLink>
+          <RouterLink v-if="authStore.isLoggedIn" to="/drafts">草稿箱</RouterLink>
+          <RouterLink v-if="authStore.isLoggedIn" to="/histories">历史</RouterLink>
+          <RouterLink v-if="authStore.isLoggedIn" to="/chat" class="default-layout__notice-link">
+            聊天
+            <span v-if="notificationStore.unread.chatCount > 0" class="default-layout__notice-badge">
+              {{ notificationStore.unread.chatCount > 99 ? '99+' : notificationStore.unread.chatCount }}
+            </span>
+          </RouterLink>
+          <RouterLink v-if="authStore.isLoggedIn" to="/notifications" class="default-layout__notice-link">
+            通知
+            <span v-if="notificationStore.unread.total > 0" class="default-layout__notice-badge">
+              {{ notificationStore.unread.total > 99 ? '99+' : notificationStore.unread.total }}
+            </span>
+          </RouterLink>
+          <RouterLink v-if="authStore.isLoggedIn" to="/me">我的</RouterLink>
+        </nav>
+
+        <div class="default-layout__user-box">
+          <template v-if="authStore.isLoggedIn">
+            <div class="default-layout__user-meta">
+              <span class="default-layout__user-name">{{ authStore.userInfo?.nickname || authStore.userInfo?.username }}</span>
+              <small>{{ chatStore.connected ? '实时连接正常' : '实时连接中断' }}</small>
+            </div>
+            <a-button size="mini" @click="handleLogout">退出</a-button>
+          </template>
+          <template v-else>
+            <RouterLink to="/login">登录</RouterLink>
+            <RouterLink to="/register">注册</RouterLink>
+          </template>
+        </div>
+      </div>
     </header>
 
     <main class="default-layout__main">
       <RouterView />
     </main>
+
+    <footer class="default-layout__footer">
+      <span>当前阶段：一期功能收尾</span>
+      <span>下一阶段：全局 UI 统一、移动端细节、演示与验收材料</span>
+    </footer>
   </div>
 </template>
 
@@ -92,23 +115,96 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 32px;
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  gap: 20px;
+  padding: 18px 32px;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: 0 10px 36px rgba(15, 23, 42, 0.04);
+}
+
+.default-layout__brand-group {
+  display: grid;
+  gap: 6px;
 }
 
 .default-layout__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
   font-size: 20px;
-  font-weight: 700;
   color: #172033;
   text-decoration: none;
+}
+
+.default-layout__brand strong,
+.default-layout__brand small {
+  display: block;
+}
+
+.default-layout__brand strong {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.default-layout__brand small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.default-layout__brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #0f766e, #2563eb);
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
+}
+
+.default-layout__slogan {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.default-layout__actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .default-layout__nav {
   display: flex;
   align-items: center;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.default-layout__nav a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 14px;
+  color: #334155;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 999px;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
 }
 
 .default-layout__notice-link {
@@ -130,24 +226,53 @@ onMounted(async () => {
   border-radius: 999px;
 }
 
-.default-layout__nav a {
-  color: #334155;
-  text-decoration: none;
-}
-
 .default-layout__nav a.router-link-active {
   color: #0f766e;
   font-weight: 700;
+  background: rgba(236, 253, 245, 0.95);
+  border-color: rgba(15, 118, 110, 0.18);
+  box-shadow: 0 10px 24px rgba(15, 118, 110, 0.08);
 }
 
-.default-layout__user {
+.default-layout__nav a:hover {
+  transform: translateY(-1px);
+}
+
+.default-layout__user-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.default-layout__user-meta {
+  display: grid;
+  text-align: right;
+}
+
+.default-layout__user-name {
+  color: #172033;
+  font-weight: 700;
+}
+
+.default-layout__user-meta small {
   color: #64748b;
+  font-size: 12px;
 }
 
 .default-layout__main {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 28px 24px 20px;
+}
+
+.default-layout__footer {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  padding: 0 24px 28px;
+  color: #64748b;
+  font-size: 13px;
 }
 
 @media (max-width: 720px) {
@@ -158,8 +283,25 @@ onMounted(async () => {
     padding: 16px 20px;
   }
 
+  .default-layout__actions,
+  .default-layout__user-box,
+  .default-layout__user-meta {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .default-layout__actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
   .default-layout__nav {
-    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .default-layout__nav a {
+    height: 34px;
+    padding: 0 12px;
   }
 
   .default-layout__main {

@@ -2,19 +2,46 @@
   <section class="post-detail">
     <a-spin :loading="loading">
       <article v-if="post" class="post-detail__article">
-        <RouterLink class="post-detail__back" to="/">返回帖子流</RouterLink>
-        <h1>{{ post.title }}</h1>
-        <div class="post-detail__meta">
-          <span>{{ post.author?.nickname || post.author?.username || '匿名用户' }}</span>
-          <span>{{ formatDateTime(post.publishedAt) }}</span>
-          <span>浏览 {{ post.viewCount || 0 }}</span>
-          <span>评论 {{ post.commentCount || 0 }}</span>
-          <a-tag v-if="post.status === 'HIDDEN'" color="orange">已下架</a-tag>
+        <div class="post-detail__topbar">
+          <RouterLink class="post-detail__back" to="/">返回帖子流</RouterLink>
+          <div class="post-detail__topbar-actions">
+            <a-tag v-if="post.status === 'HIDDEN'" color="orange">已下架</a-tag>
+            <a-tag v-if="post.allowComment === 0" color="red">评论已关闭</a-tag>
+          </div>
         </div>
+
+        <div class="post-detail__hero">
+          <div class="post-detail__hero-main">
+            <p class="post-detail__eyebrow">Post Detail</p>
+            <h1>{{ post.title }}</h1>
+            <div class="post-detail__meta">
+              <span>{{ post.author?.nickname || post.author?.username || '匿名用户' }}</span>
+              <span>{{ formatDateTime(post.publishedAt) }}</span>
+              <span>浏览 {{ post.viewCount || 0 }}</span>
+              <span>评论 {{ post.commentCount || 0 }}</span>
+            </div>
+            <div v-if="post.tags?.length" class="post-detail__tags">
+              <a-tag v-for="tag in post.tags" :key="tag.id" color="green">{{ tag.name }}</a-tag>
+            </div>
+          </div>
+
+          <div class="post-detail__hero-side">
+            <article>
+              <strong>{{ post.likeCount || 0 }}</strong>
+              <span>点赞</span>
+            </article>
+            <article>
+              <strong>{{ post.favoriteCount || 0 }}</strong>
+              <span>收藏</span>
+            </article>
+            <article>
+              <strong>{{ post.commentCount || 0 }}</strong>
+              <span>评论</span>
+            </article>
+          </div>
+        </div>
+
         <img v-if="post.coverUrl" :src="resolveAssetUrl(post.coverUrl)" alt="" class="post-detail__cover" />
-        <div v-if="post.tags?.length" class="post-detail__tags">
-          <a-tag v-for="tag in post.tags" :key="tag.id" color="green">{{ tag.name }}</a-tag>
-        </div>
         <div class="markdown-body post-detail__content" v-html="contentHtml"></div>
         <div class="post-detail__actions">
           <a-button :type="post.liked ? 'primary' : 'outline'" :loading="likingPost" @click="togglePostLike">
@@ -43,8 +70,15 @@
         <template #title>作者已关闭评论区。</template>
       </a-alert>
       <div v-else-if="authStore.isLoggedIn" class="post-detail__comment-form">
+        <div class="post-detail__comment-head">
+          <div>
+            <p>发表评论</p>
+            <h3>说点什么，参与这场讨论</h3>
+          </div>
+          <span>{{ commentContent.trim().length }}/1000</span>
+        </div>
         <a-textarea v-model="commentContent" placeholder="写下你的评论" :auto-size="{ minRows: 3, maxRows: 6 }" />
-        <a-button type="primary" :loading="submittingComment" @click="submitComment">发表评论</a-button>
+        <a-button type="primary" :disabled="!commentContent.trim()" :loading="submittingComment" @click="submitComment">发表评论</a-button>
       </div>
       <a-alert v-else type="info" show-icon>
         <template #title>登录后可以发表评论、回复和点赞评论。</template>
@@ -392,14 +426,46 @@ watch(
   padding: 30px;
 }
 
+.post-detail__topbar,
+.post-detail__topbar-actions,
+.post-detail__back {
+  display: flex;
+  align-items: center;
+}
+
+.post-detail__topbar {
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.post-detail__topbar-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .post-detail__back {
   color: #0f766e;
   font-weight: 700;
   text-decoration: none;
 }
 
+.post-detail__hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 20px;
+  margin-top: 18px;
+}
+
+.post-detail__eyebrow {
+  margin: 0 0 10px;
+  color: #0f766e;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .post-detail h1 {
-  margin: 14px 0;
+  margin: 0 0 14px;
   color: #172033;
   font-size: clamp(30px, 5vw, 52px);
   line-height: 1.08;
@@ -416,6 +482,41 @@ watch(
 
 .post-detail__meta {
   color: #64748b;
+}
+
+.post-detail__meta span {
+  padding: 6px 10px;
+  background: rgba(248, 250, 252, 0.9);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 999px;
+}
+
+.post-detail__hero-side {
+  display: grid;
+  gap: 12px;
+}
+
+.post-detail__hero-side article {
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(241, 245, 249, 0.95));
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 16px;
+}
+
+.post-detail__hero-side strong,
+.post-detail__hero-side span {
+  display: block;
+}
+
+.post-detail__hero-side strong {
+  color: #172033;
+  font-size: 24px;
+}
+
+.post-detail__hero-side span {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 13px;
 }
 
 .post-detail__cover {
@@ -445,6 +546,35 @@ watch(
 
 .post-detail__comment-form {
   margin-bottom: 22px;
+}
+
+.post-detail__comment-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.post-detail__comment-head p,
+.post-detail__comment-head h3,
+.post-detail__comment-head span {
+  margin: 0;
+}
+
+.post-detail__comment-head p {
+  color: #0f766e;
+  font-weight: 800;
+}
+
+.post-detail__comment-head h3 {
+  margin-top: 6px;
+  color: #172033;
+  font-size: 22px;
+}
+
+.post-detail__comment-head span {
+  color: #64748b;
+  font-size: 13px;
 }
 
 .post-detail__comment-form .arco-btn {
@@ -486,6 +616,16 @@ watch(
 @media (max-width: 720px) {
   .post-detail__article {
     padding: 22px;
+  }
+
+  .post-detail__hero {
+    grid-template-columns: 1fr;
+  }
+
+  .post-detail__comment-head,
+  .post-detail__topbar {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>

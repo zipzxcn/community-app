@@ -1,10 +1,24 @@
 <template>
   <section class="notification-center">
     <div class="notification-center__hero">
-      <div>
+      <div class="notification-center__hero-main">
         <p>Inbox</p>
         <h1>通知中心</h1>
         <span>统一查看点赞、评论、关注、系统消息，并支持单条或批量已读。</span>
+        <div class="notification-center__hero-stats">
+          <article>
+            <strong>{{ unread.chatCount }}</strong>
+            <span>聊天未读</span>
+          </article>
+          <article>
+            <strong>{{ unread.followCount }}</strong>
+            <span>关注提醒</span>
+          </article>
+          <article>
+            <strong>{{ unread.commentCount + unread.postLikeCount }}</strong>
+            <span>互动提醒</span>
+          </article>
+        </div>
       </div>
       <div class="notification-center__hero-total">
         <strong>{{ unread.total }}</strong>
@@ -21,6 +35,12 @@
 
     <a-card :bordered="false" class="notification-center__panel">
       <div class="notification-center__filters">
+        <div class="notification-center__filter-head">
+          <div>
+            <p>筛选通知</p>
+            <h2>按类型、状态和关键词快速整理消息</h2>
+          </div>
+        </div>
         <a-radio-group v-model="typeFilter" type="button" @change="handleFilterChange">
           <a-radio value="ALL">全部</a-radio>
           <a-radio value="POST_LIKE">点赞</a-radio>
@@ -310,6 +330,11 @@ onMounted(async () => {
   border-radius: 22px;
 }
 
+.notification-center__hero-main {
+  display: grid;
+  gap: 16px;
+}
+
 .notification-center__hero p,
 .notification-center__hero h1,
 .notification-center__hero span,
@@ -332,6 +357,35 @@ onMounted(async () => {
   display: block;
   margin-top: 10px;
   color: #64748b;
+}
+
+.notification-center__hero-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.notification-center__hero-stats article {
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 16px;
+}
+
+.notification-center__hero-stats strong,
+.notification-center__hero-stats span {
+  display: block;
+}
+
+.notification-center__hero-stats strong {
+  color: #172033;
+  font-size: 18px;
+}
+
+.notification-center__hero-stats span {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 13px;
 }
 
 .notification-center__hero-total {
@@ -392,6 +446,22 @@ onMounted(async () => {
   margin-bottom: 18px;
 }
 
+.notification-center__filter-head p,
+.notification-center__filter-head h2 {
+  margin: 0;
+}
+
+.notification-center__filter-head p {
+  color: #0f766e;
+  font-weight: 800;
+}
+
+.notification-center__filter-head h2 {
+  margin-top: 6px;
+  color: #172033;
+  font-size: 24px;
+}
+
 .notification-center__tools {
   display: grid;
   grid-template-columns: minmax(0, 320px) auto;
@@ -410,6 +480,14 @@ onMounted(async () => {
   gap: 14px;
   padding: 18px;
   border-radius: 16px;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.notification-center__item:hover {
+  transform: translateY(-1px);
 }
 
 .notification-center__item.is-unread {
@@ -478,6 +556,10 @@ onMounted(async () => {
 @media (max-width: 900px) {
   .notification-center__stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .notification-center__hero-stats {
+    grid-template-columns: 1fr;
   }
 
   .notification-center__item,

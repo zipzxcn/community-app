@@ -2,15 +2,31 @@
   <section class="user-profile">
     <a-spin :loading="loading">
       <div v-if="profile" class="user-profile__hero">
-        <div class="user-profile__identity">
-          <a-avatar :size="72" class="user-profile__avatar">
-            <img v-if="profile.avatarUrl" :src="resolveAssetUrl(profile.avatarUrl)" alt="" />
-            <template v-else>{{ (profile.nickname || profile.username).slice(0, 1).toUpperCase() }}</template>
-          </a-avatar>
-          <div>
-            <p class="user-profile__eyebrow">Profile</p>
-            <h1>{{ profile.nickname || profile.username }}</h1>
-            <p>@{{ profile.username }}</p>
+        <div class="user-profile__hero-main">
+          <div class="user-profile__identity">
+            <a-avatar :size="72" class="user-profile__avatar">
+              <img v-if="profile.avatarUrl" :src="resolveAssetUrl(profile.avatarUrl)" alt="" />
+              <template v-else>{{ (profile.nickname || profile.username).slice(0, 1).toUpperCase() }}</template>
+            </a-avatar>
+            <div>
+              <p class="user-profile__eyebrow">Profile</p>
+              <h1>{{ profile.nickname || profile.username }}</h1>
+              <p>@{{ profile.username }}</p>
+            </div>
+          </div>
+          <div class="user-profile__hero-cards">
+            <article>
+              <strong>{{ profile.postCount }}</strong>
+              <span>公开帖子</span>
+            </article>
+            <article>
+              <strong>{{ profile.followingCount }}</strong>
+              <span>TA 的关注</span>
+            </article>
+            <article>
+              <strong>{{ profile.followerCount }}</strong>
+              <span>TA 的粉丝</span>
+            </article>
           </div>
         </div>
         <div class="user-profile__actions">
@@ -144,7 +160,7 @@ watch(
   padding: 22px;
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 8px;
+  border-radius: 20px;
 }
 
 .user-profile__hero {
@@ -152,6 +168,12 @@ watch(
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+}
+
+.user-profile__hero-main {
+  display: grid;
+  gap: 18px;
+  flex: 1;
 }
 
 .user-profile__identity {
@@ -181,6 +203,36 @@ watch(
 .user-profile p {
   margin: 0;
   color: #64748b;
+}
+
+.user-profile__hero-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 720px;
+}
+
+.user-profile__hero-cards article {
+  padding: 16px;
+  background: rgba(248, 250, 252, 0.86);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 16px;
+}
+
+.user-profile__hero-cards strong,
+.user-profile__hero-cards span {
+  display: block;
+}
+
+.user-profile__hero-cards strong {
+  color: #172033;
+  font-size: 20px;
+}
+
+.user-profile__hero-cards span {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 13px;
 }
 
 .user-profile__actions,
@@ -216,6 +268,10 @@ watch(
   .user-profile__hero {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .user-profile__hero-cards {
+    grid-template-columns: 1fr;
   }
 }
 </style>
