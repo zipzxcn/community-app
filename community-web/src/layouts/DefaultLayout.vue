@@ -7,6 +7,12 @@
         <RouterLink to="/users/search">找人</RouterLink>
         <RouterLink v-if="authStore.isLoggedIn" to="/posts/publish">发布</RouterLink>
         <RouterLink v-if="authStore.isLoggedIn" to="/drafts">草稿箱</RouterLink>
+        <RouterLink v-if="authStore.isLoggedIn" to="/notifications" class="default-layout__notice-link">
+          通知
+          <span v-if="notificationStore.unread.total > 0" class="default-layout__notice-badge">
+            {{ notificationStore.unread.total > 99 ? '99+' : notificationStore.unread.total }}
+          </span>
+        </RouterLink>
         <RouterLink v-if="authStore.isLoggedIn" to="/me">我的</RouterLink>
         <template v-if="authStore.isLoggedIn">
           <span class="default-layout__user">{{ authStore.userInfo?.nickname || authStore.userInfo?.username }}</span>
@@ -26,18 +32,40 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useNotificationStore } from '@/stores/notification'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
 
 async function handleLogout() {
+  notificationStore.reset()
   await authStore.logout()
   Message.success('已退出登录')
   await router.push('/')
 }
+
+watch(
+  () => authStore.isLoggedIn,
+  async (loggedIn) => {
+    if (!loggedIn) {
+      notificationStore.reset()
+      return
+    }
+    await notificationStore.refreshUnread().catch(() => undefined)
+  },
+  { immediate: true },
+)
+
+onMounted(async () => {
+  if (authStore.isLoggedIn) {
+    await notificationStore.refreshUnread().catch(() => undefined)
+  }
+})
 </script>
 
 <style scoped lang="scss">
@@ -69,6 +97,25 @@ async function handleLogout() {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.default-layout__notice-link {
+  position: relative;
+}
+
+.default-layout__notice-badge {
+  position: absolute;
+  top: -8px;
+  right: -14px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  background: #ef4444;
+  border-radius: 999px;
 }
 
 .default-layout__nav a {
