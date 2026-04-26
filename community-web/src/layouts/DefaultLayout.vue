@@ -7,6 +7,7 @@
         <RouterLink to="/users/search">找人</RouterLink>
         <RouterLink v-if="authStore.isLoggedIn" to="/posts/publish">发布</RouterLink>
         <RouterLink v-if="authStore.isLoggedIn" to="/drafts">草稿箱</RouterLink>
+        <RouterLink v-if="authStore.isLoggedIn" to="/histories">历史</RouterLink>
         <RouterLink v-if="authStore.isLoggedIn" to="/notifications" class="default-layout__notice-link">
           通知
           <span v-if="notificationStore.unread.total > 0" class="default-layout__notice-badge">

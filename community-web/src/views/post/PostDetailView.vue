@@ -89,6 +89,7 @@ import { Message, Modal } from '@arco-design/web-vue'
 import { useRouter } from 'vue-router'
 import CommentItem from '@/components/comment/CommentItem.vue'
 import { createComment, deleteComment, fetchPostComments, likeComment, replyComment, unlikeComment } from '@/api/comment'
+import { recordHistory } from '@/api/history'
 import { deletePost, favoritePost, fetchPostDetail, hidePost, likePost, unfavoritePost, unlikePost } from '@/api/post'
 import { useAuthStore } from '@/stores/auth'
 import type { CommentItem as CommentItemType } from '@/types/comment'
@@ -145,6 +146,13 @@ async function loadPost() {
   } finally {
     loading.value = false
   }
+}
+
+async function recordBrowseHistory() {
+  if (!authStore.isLoggedIn || !post.value) {
+    return
+  }
+  await recordHistory(post.value.id).catch(() => undefined)
 }
 
 async function loadComments() {
@@ -351,6 +359,7 @@ function changeCommentPage(current: number) {
 
 onMounted(async () => {
   await loadPost()
+  await recordBrowseHistory()
   await loadComments()
 })
 
@@ -359,6 +368,7 @@ watch(
   async () => {
     commentPage.page = 1
     await loadPost()
+    await recordBrowseHistory()
     await loadComments()
   },
 )

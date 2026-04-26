@@ -69,3 +69,8 @@ app:
       secret: change-this-secret-change-this-secret
       access-token-expire-seconds: 7200
       refresh-token-expire-seconds: 1209600
+  history:
+    cleanup:
+      enabled: true
+      retention-days: 180
+      cron: 0 15 3 * * *
