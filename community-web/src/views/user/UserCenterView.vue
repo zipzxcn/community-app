@@ -53,6 +53,14 @@
         </a-form>
 
         <template v-else-if="isPostTab">
+          <div class="user-center__section-head">
+            <div>
+              <p>{{ currentPostMeta.eyebrow }}</p>
+              <h2>{{ currentPostMeta.title }}</h2>
+              <span>{{ currentPostMeta.description }}</span>
+            </div>
+            <strong>{{ currentPage.total }}</strong>
+          </div>
           <div v-if="activeTab === 'posts'" class="user-center__post-filter">
             <a-radio-group v-model="postStatusFilter" type="button">
               <a-radio value="ALL">全部</a-radio>
@@ -75,9 +83,32 @@
                 </a-button>
                 <a-button size="small" status="danger" @click="removePost(post.id)">删除</a-button>
               </div>
+              <div v-else class="user-center__post-actions">
+                <RouterLink :to="`/posts/${post.id}`">
+                  <a-button size="small">查看详情</a-button>
+                </RouterLink>
+                <a-button
+                  v-if="activeTab === 'favorites'"
+                  size="small"
+                  status="danger"
+                  :loading="postActionId === post.id"
+                  @click="toggleFavorite(post)"
+                >
+                  取消收藏
+                </a-button>
+                <a-button
+                  v-if="activeTab === 'likes'"
+                  size="small"
+                  status="danger"
+                  :loading="postActionId === post.id"
+                  @click="toggleLike(post)"
+                >
+                  取消点赞
+                </a-button>
+              </div>
             </article>
           </div>
-          <a-empty v-else description="暂无内容" />
+          <a-empty v-else :description="currentPostMeta.emptyText" />
           <div v-if="currentPage.total > currentPage.size" class="user-center__pager">
             <a-pagination
               :current="currentPage.page"
@@ -89,6 +120,14 @@
         </template>
 
         <template v-else>
+          <div class="user-center__section-head">
+            <div>
+              <p>{{ currentUserMeta.eyebrow }}</p>
+              <h2>{{ currentUserMeta.title }}</h2>
+              <span>{{ currentUserMeta.description }}</span>
+            </div>
+            <strong>{{ currentUserPage.total }}</strong>
+          </div>
           <div v-if="currentUsers.length" class="user-center__user-list">
             <article v-for="user in currentUsers" :key="user.id" class="user-center__user-item">
               <RouterLink :to="`/users/${user.id}`" class="user-center__user-main">
@@ -129,11 +168,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
+import { useRoute, useRouter } from 'vue-router'
 import PostCard from '@/components/post/PostCard.vue'
 import { fetchFollowers, fetchFollowing, fetchMutualFollows, followUser } from '@/api/follow'
-import { deletePost, hidePost } from '@/api/post'
+import { deletePost, hidePost, unlikePost, unfavoritePost } from '@/api/post'
 import { fetchUserFavorites, fetchUserLikes, fetchUserPosts, fetchUserProfile, updateMyProfile } from '@/api/user'
 import { uploadImageFile } from '@/api/file'
 import { useAuthStore } from '@/stores/auth'
@@ -144,10 +184,13 @@ import { resolveAssetUrl } from '@/utils/format'
 type CenterTab = 'profile' | 'posts' | 'favorites' | 'likes' | 'following' | 'followers' | 'mutual'
 
 const authStore = useAuthStore()
+const route = useRoute()
+const router = useRouter()
 const activeTab = ref<CenterTab>('profile')
 const loading = ref(false)
 const savingProfile = ref(false)
 const uploadingAvatar = ref(false)
+const postActionId = ref<number | null>(null)
 const postStatusFilter = ref<'ALL' | 'PUBLISHED' | 'HIDDEN'>('ALL')
 const myPosts = ref<PostListItem[]>([])
 const myFavorites = ref<PostListItem[]>([])
@@ -196,6 +239,51 @@ const currentUserPage = computed(() => {
   if (activeTab.value === 'followers') return followerPage
   if (activeTab.value === 'mutual') return mutualPage
   return followingPage
+})
+const currentPostMeta = computed(() => {
+  if (activeTab.value === 'favorites') {
+    return {
+      eyebrow: 'Favorites',
+      title: '我的收藏',
+      description: '收藏过的帖子会集中在这里，方便回看和继续互动。',
+      emptyText: '你还没有收藏任何帖子',
+    }
+  }
+  if (activeTab.value === 'likes') {
+    return {
+      eyebrow: 'Likes',
+      title: '我的点赞',
+      description: '这里汇总你点过赞的帖子，方便快速回访。',
+      emptyText: '你还没有点赞任何帖子',
+    }
+  }
+  return {
+    eyebrow: 'Posts',
+    title: '我的帖子',
+    description: '管理自己发布的帖子，支持编辑、下架和删除。',
+    emptyText: '你还没有发布任何帖子',
+  }
+})
+const currentUserMeta = computed(() => {
+  if (activeTab.value === 'followers') {
+    return {
+      eyebrow: 'Followers',
+      title: '我的粉丝',
+      description: '关注你的人会显示在这里。',
+    }
+  }
+  if (activeTab.value === 'mutual') {
+    return {
+      eyebrow: 'Mutual',
+      title: '互关好友',
+      description: '双方互相关注的用户，适合继续互动和私聊。',
+    }
+  }
+  return {
+    eyebrow: 'Following',
+    title: '我的关注',
+    description: '你主动关注的用户列表。',
+  }
 })
 const emptyUserText = computed(() => {
   if (activeTab.value === 'followers') return '暂无粉丝'
@@ -344,6 +432,32 @@ async function followBack(userId: number) {
   }
 }
 
+async function toggleFavorite(post: PostListItem) {
+  postActionId.value = post.id
+  try {
+    await unfavoritePost(post.id)
+    Message.success('已取消收藏')
+    await loadPosts('favorites')
+  } catch (error) {
+    Message.error(error instanceof Error ? error.message : '取消收藏失败')
+  } finally {
+    postActionId.value = null
+  }
+}
+
+async function toggleLike(post: PostListItem) {
+  postActionId.value = post.id
+  try {
+    await unlikePost(post.id)
+    Message.success('已取消点赞')
+    await loadPosts('likes')
+  } catch (error) {
+    Message.error(error instanceof Error ? error.message : '取消点赞失败')
+  } finally {
+    postActionId.value = null
+  }
+}
+
 function togglePostHidden(post: PostListItem) {
   const nextHidden = post.status !== 'HIDDEN'
   Modal.confirm({
@@ -380,6 +494,9 @@ function removePost(postId: number) {
 async function handleTabChange(key: string | number) {
   const tab = String(key) as CenterTab
   activeTab.value = tab
+  await router.replace({
+    query: tab === 'profile' ? {} : { tab },
+  })
   if (tab === 'profile') return
   if (['following', 'followers', 'mutual'].includes(tab)) {
     await loadUsers(tab)
@@ -396,6 +513,13 @@ function changePostPage(page: number) {
   loadPosts(tab)
 }
 
+function getInitialTab() {
+  const raw = route.query.tab
+  const value = Array.isArray(raw) ? raw[0] : raw
+  const allowed: CenterTab[] = ['profile', 'posts', 'favorites', 'likes', 'following', 'followers', 'mutual']
+  return allowed.includes(value as CenterTab) ? (value as CenterTab) : 'posts'
+}
+
 function changeUserPage(page: number) {
   const tab = activeTab.value
   if (tab === 'following') followingPage.page = page
@@ -404,8 +528,19 @@ function changeUserPage(page: number) {
   loadUsers(tab)
 }
 
-loadOwnProfile()
-loadPosts('posts')
+onMounted(async () => {
+  await loadOwnProfile()
+  const tab = getInitialTab()
+  activeTab.value = tab
+  if (tab === 'profile') {
+    return
+  }
+  if (['following', 'followers', 'mutual'].includes(tab)) {
+    await loadUsers(tab)
+    return
+  }
+  await loadPosts(tab)
+})
 </script>
 
 <style scoped lang="scss">
@@ -524,6 +659,48 @@ loadPosts('posts')
   margin-top: 14px;
 }
 
+.user-center__section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.08), rgba(59, 130, 246, 0.06));
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 16px;
+}
+
+.user-center__section-head p,
+.user-center__section-head h2,
+.user-center__section-head span,
+.user-center__section-head strong {
+  margin: 0;
+}
+
+.user-center__section-head p {
+  color: #0f766e;
+  font-weight: 800;
+}
+
+.user-center__section-head h2 {
+  margin-top: 6px;
+  color: #172033;
+  font-size: 24px;
+}
+
+.user-center__section-head span {
+  display: block;
+  margin-top: 8px;
+  color: #64748b;
+}
+
+.user-center__section-head strong {
+  color: #172033;
+  font-size: 30px;
+  line-height: 1;
+}
+
 .user-center__post-item {
   display: grid;
   gap: 10px;
@@ -580,6 +757,11 @@ loadPosts('posts')
 
   .user-center__avatar-editor {
     grid-template-columns: 1fr;
+  }
+
+  .user-center__section-head {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>

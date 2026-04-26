@@ -17,10 +17,10 @@
         </div>
         <div class="markdown-body post-detail__content" v-html="contentHtml"></div>
         <div class="post-detail__actions">
-          <a-button :type="post.liked ? 'primary' : 'outline'" @click="togglePostLike">
+          <a-button :type="post.liked ? 'primary' : 'outline'" :loading="likingPost" @click="togglePostLike">
             {{ post.liked ? '已点赞' : '点赞' }} {{ post.likeCount || 0 }}
           </a-button>
-          <a-button :type="post.favorited ? 'primary' : 'outline'" @click="togglePostFavorite">
+          <a-button :type="post.favorited ? 'primary' : 'outline'" :loading="favoritingPost" @click="togglePostFavorite">
             {{ post.favorited ? '已收藏' : '收藏' }} {{ post.favoriteCount || 0 }}
           </a-button>
           <template v-if="isOwner">
@@ -38,7 +38,7 @@
     </a-spin>
 
     <a-card v-if="post" class="post-detail__comments" :bordered="false">
-      <template #title>评论互动</template>
+      <template #title>评论互动 {{ post.commentCount || 0 }}</template>
       <a-alert v-if="post.allowComment === 0" type="warning" show-icon>
         <template #title>作者已关闭评论区。</template>
       </a-alert>
@@ -56,6 +56,13 @@
             v-for="comment in comments"
             :key="comment.id"
             :comment="comment"
+            :can-reply="canReplyComment"
+            :current-user-id="authStore.userInfo?.id"
+            :post-author-id="post.author?.id"
+            :show-delete-hint="authStore.isLoggedIn"
+            :busy-like-id="commentLikeId"
+            :busy-delete-id="deletingCommentId"
+            :busy-reply-id="replyingCommentId"
             @reply="submitReply"
             @delete="removeComment"
             @toggle-like="toggleCommentLike"
@@ -98,6 +105,11 @@ const authStore = useAuthStore()
 const loading = ref(false)
 const commentsLoading = ref(false)
 const submittingComment = ref(false)
+const likingPost = ref(false)
+const favoritingPost = ref(false)
+const commentLikeId = ref<number | null>(null)
+const deletingCommentId = ref<number | null>(null)
+const replyingCommentId = ref<number | null>(null)
 const post = ref<PostDetail | null>(null)
 const comments = ref<CommentItemType[]>([])
 const commentContent = ref('')
@@ -108,6 +120,7 @@ const commentPage = reactive({
 })
 
 const isOwner = computed(() => Boolean(post.value && authStore.userInfo?.id === post.value.author?.id))
+const canReplyComment = computed(() => authStore.isLoggedIn && post.value?.allowComment !== 0)
 const contentHtml = computed(() => renderMarkdown(post.value?.contentMd))
 
 function requireLogin() {
@@ -154,6 +167,7 @@ async function loadComments() {
 
 async function togglePostLike() {
   if (!post.value || !requireLogin()) return
+  likingPost.value = true
   try {
     if (post.value.liked) {
       await unlikePost(post.value.id)
@@ -166,11 +180,14 @@ async function togglePostLike() {
     }
   } catch (error) {
     Message.error(error instanceof Error ? error.message : '点赞操作失败')
+  } finally {
+    likingPost.value = false
   }
 }
 
 async function togglePostFavorite() {
   if (!post.value || !requireLogin()) return
+  favoritingPost.value = true
   try {
     if (post.value.favorited) {
       await unfavoritePost(post.value.id)
@@ -183,6 +200,8 @@ async function togglePostFavorite() {
     }
   } catch (error) {
     Message.error(error instanceof Error ? error.message : '收藏操作失败')
+  } finally {
+    favoritingPost.value = false
   }
 }
 
@@ -256,6 +275,7 @@ async function submitReply(payload: { comment: CommentItemType; content: string 
     return
   }
   if (!requireLogin()) return
+  replyingCommentId.value = payload.comment.id
   try {
     await replyComment(payload.comment.id, {
       parentId: payload.comment.id,
@@ -266,6 +286,8 @@ async function submitReply(payload: { comment: CommentItemType; content: string 
     await loadComments()
   } catch (error) {
     Message.error(error instanceof Error ? error.message : '回复失败')
+  } finally {
+    replyingCommentId.value = null
   }
 }
 
@@ -273,8 +295,13 @@ function removeComment(comment: CommentItemType) {
   if (!requireLogin()) return
   Modal.confirm({
     title: '删除评论',
-    content: '确认删除这条评论？',
+    content: canDeleteComment(comment) ? '确认删除这条评论？' : '仅评论作者或帖主可删除这条评论。',
     async onOk() {
+      if (!canDeleteComment(comment)) {
+        Message.warning('仅评论作者或帖主可删除评论')
+        return
+      }
+      deletingCommentId.value = comment.id
       try {
         await deleteComment(comment.id)
         Message.success('评论已删除')
@@ -282,6 +309,8 @@ function removeComment(comment: CommentItemType) {
         await loadComments()
       } catch (error) {
         Message.error(error instanceof Error ? error.message : '删除失败')
+      } finally {
+        deletingCommentId.value = null
       }
     },
   })
@@ -289,6 +318,7 @@ function removeComment(comment: CommentItemType) {
 
 async function toggleCommentLike(comment: CommentItemType) {
   if (!requireLogin()) return
+  commentLikeId.value = comment.id
   try {
     if (comment.liked) {
       await unlikeComment(comment.id)
@@ -301,7 +331,17 @@ async function toggleCommentLike(comment: CommentItemType) {
     }
   } catch (error) {
     Message.error(error instanceof Error ? error.message : '评论点赞失败')
+  } finally {
+    commentLikeId.value = null
   }
+}
+
+function canDeleteComment(comment: CommentItemType) {
+  const currentUserId = authStore.userInfo?.id
+  if (!currentUserId) {
+    return false
+  }
+  return currentUserId === comment.user?.id || currentUserId === post.value?.author?.id
 }
 
 function changeCommentPage(current: number) {

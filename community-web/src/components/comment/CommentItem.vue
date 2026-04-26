@@ -1,28 +1,53 @@
 <template>
   <div class="comment-item">
     <div class="comment-item__body">
-      <div class="comment-item__avatar">{{ displayName.slice(0, 1).toUpperCase() }}</div>
+      <a-avatar :size="36" class="comment-item__avatar">
+        <img v-if="comment.user?.avatarUrl" :src="resolveAssetUrl(comment.user.avatarUrl)" alt="" />
+        <template v-else>{{ displayName.slice(0, 1).toUpperCase() }}</template>
+      </a-avatar>
       <div class="comment-item__content">
         <div class="comment-item__top">
           <strong>{{ displayName }}</strong>
           <span>{{ formatDateTime(comment.createdAt) }}</span>
+          <span v-if="comment.replyToUser" class="comment-item__reply-target">
+            回复 @{{ comment.replyToUser.nickname || comment.replyToUser.username }}
+          </span>
         </div>
         <p>
           <template v-if="comment.replyToUser">@{{ comment.replyToUser.nickname || comment.replyToUser.username }} </template>
           {{ comment.content }}
         </p>
         <div class="comment-item__actions">
-          <a-button size="mini" type="text" @click="$emit('toggle-like', comment)">
+          <a-button size="mini" type="text" :loading="busyLike" @click="$emit('toggle-like', comment)">
             {{ comment.liked ? '取消赞' : '点赞' }} {{ comment.likeCount || 0 }}
           </a-button>
-          <a-button size="mini" type="text" @click="replying = !replying">回复</a-button>
-          <a-button size="mini" type="text" status="danger" @click="$emit('delete', comment)">删除</a-button>
+          <a-tooltip v-if="!canReply" content="登录后且评论区开启时才能回复">
+            <a-button size="mini" type="text" disabled>回复</a-button>
+          </a-tooltip>
+          <a-button v-else size="mini" type="text" @click="replying = !replying">回复</a-button>
+          <a-button
+            v-if="canDelete"
+            size="mini"
+            type="text"
+            status="danger"
+            :loading="busyDelete"
+            @click="$emit('delete', comment)"
+          >
+            删除
+          </a-button>
+          <a-tooltip v-else-if="showDeleteHint" content="仅评论作者或帖主可删除">
+            <a-button size="mini" type="text" disabled>删除</a-button>
+          </a-tooltip>
         </div>
-        <div v-if="replying" class="comment-item__reply">
-          <a-textarea v-model="replyContent" placeholder="写下你的回复" :auto-size="{ minRows: 2, maxRows: 4 }" />
+        <div v-if="replying && canReply" class="comment-item__reply">
+          <a-textarea
+            v-model="replyContent"
+            :placeholder="`回复 @${displayName}`"
+            :auto-size="{ minRows: 2, maxRows: 4 }"
+          />
           <div>
             <a-button size="small" @click="replying = false">取消</a-button>
-            <a-button size="small" type="primary" @click="submitReply">发送回复</a-button>
+            <a-button size="small" type="primary" :loading="busyReply" @click="submitReply">发送回复</a-button>
           </div>
         </div>
       </div>
@@ -33,6 +58,13 @@
         v-for="reply in comment.replies"
         :key="reply.id"
         :comment="reply"
+        :can-reply="canReply"
+        :current-user-id="currentUserId"
+        :post-author-id="postAuthorId"
+        :show-delete-hint="showDeleteHint"
+        :busy-like-id="busyLikeId"
+        :busy-delete-id="busyDeleteId"
+        :busy-reply-id="busyReplyId"
         @reply="$emit('reply', $event)"
         @delete="$emit('delete', $event)"
         @toggle-like="$emit('toggle-like', $event)"
@@ -44,12 +76,19 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { CommentItem } from '@/types/comment'
-import { formatDateTime } from '@/utils/format'
+import { formatDateTime, resolveAssetUrl } from '@/utils/format'
 
 defineOptions({ name: 'CommentItem' })
 
 const props = defineProps<{
   comment: CommentItem
+  canReply: boolean
+  currentUserId?: number | null
+  postAuthorId?: number | null
+  showDeleteHint?: boolean
+  busyLikeId?: number | null
+  busyDeleteId?: number | null
+  busyReplyId?: number | null
 }>()
 
 const emit = defineEmits<{
@@ -61,6 +100,16 @@ const emit = defineEmits<{
 const replying = ref(false)
 const replyContent = ref('')
 const displayName = computed(() => props.comment.user?.nickname || props.comment.user?.username || '匿名用户')
+const canDelete = computed(() => {
+  const currentUserId = props.currentUserId
+  if (!currentUserId) {
+    return false
+  }
+  return currentUserId === props.comment.user?.id || currentUserId === props.postAuthorId
+})
+const busyLike = computed(() => props.busyLikeId === props.comment.id)
+const busyDelete = computed(() => props.busyDeleteId === props.comment.id)
+const busyReply = computed(() => props.busyReplyId === props.comment.id)
 
 function submitReply() {
   const content = replyContent.value.trim()
@@ -85,15 +134,10 @@ function submitReply() {
 }
 
 .comment-item__avatar {
-  display: grid;
   flex: 0 0 36px;
-  width: 36px;
-  height: 36px;
   color: #0f766e;
   font-weight: 800;
   background: #ccfbf1;
-  border-radius: 50%;
-  place-items: center;
 }
 
 .comment-item__content {
@@ -110,6 +154,10 @@ function submitReply() {
 
 .comment-item__top strong {
   color: #172033;
+}
+
+.comment-item__reply-target {
+  color: #0f766e;
 }
 
 .comment-item p {
