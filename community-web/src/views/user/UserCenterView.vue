@@ -142,6 +142,9 @@
               </RouterLink>
               <a-tag v-if="user.mutualFollow" color="green">互关</a-tag>
               <a-tag v-else-if="user.followedByMe" color="arcoblue">已关注</a-tag>
+              <RouterLink v-if="user.mutualFollow" :to="`/chat?userId=${user.id}`">
+                <a-button size="small">发私信</a-button>
+              </RouterLink>
               <a-button
                 v-else-if="activeTab === 'followers'"
                 size="small"

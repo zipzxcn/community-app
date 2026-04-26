@@ -12,6 +12,8 @@ public interface ChatService {
 
     ChatThreadVo openThread(Long currentUserId, Long targetUserId);
 
+    ChatThreadVo getThread(Long currentUserId, Long threadId);
+
     PageResponse<ChatMessageVo> listMessages(Long currentUserId, Long threadId, Long cursor, Long size);
 
     ChatMessageVo sendMessage(Long currentUserId, Long threadId, SendMessageRequest request);

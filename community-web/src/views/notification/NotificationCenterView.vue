@@ -251,6 +251,9 @@ function resolveTargetPath(item: NotificationItem) {
   if (item.targetType === 'USER' && item.targetId) {
     return `/users/${item.targetId}`
   }
+  if (item.targetType === 'THREAD' && item.targetId) {
+    return `/chat?threadId=${item.targetId}`
+  }
   return ''
 }
 

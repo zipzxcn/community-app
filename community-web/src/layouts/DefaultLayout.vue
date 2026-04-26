@@ -8,6 +8,12 @@
         <RouterLink v-if="authStore.isLoggedIn" to="/posts/publish">发布</RouterLink>
         <RouterLink v-if="authStore.isLoggedIn" to="/drafts">草稿箱</RouterLink>
         <RouterLink v-if="authStore.isLoggedIn" to="/histories">历史</RouterLink>
+        <RouterLink v-if="authStore.isLoggedIn" to="/chat" class="default-layout__notice-link">
+          聊天
+          <span v-if="notificationStore.unread.chatCount > 0" class="default-layout__notice-badge">
+            {{ notificationStore.unread.chatCount > 99 ? '99+' : notificationStore.unread.chatCount }}
+          </span>
+        </RouterLink>
         <RouterLink v-if="authStore.isLoggedIn" to="/notifications" class="default-layout__notice-link">
           通知
           <span v-if="notificationStore.unread.total > 0" class="default-layout__notice-badge">
@@ -37,10 +43,12 @@ import { onMounted, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useChatStore } from '@/stores/chat'
 import { useNotificationStore } from '@/stores/notification'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const chatStore = useChatStore()
 const notificationStore = useNotificationStore()
 
 async function handleLogout() {
@@ -54,9 +62,11 @@ watch(
   () => authStore.isLoggedIn,
   async (loggedIn) => {
     if (!loggedIn) {
+      chatStore.disconnect()
       notificationStore.reset()
       return
     }
+    chatStore.connect()
     await notificationStore.refreshUnread().catch(() => undefined)
   },
   { immediate: true },
@@ -64,6 +74,7 @@ watch(
 
 onMounted(async () => {
   if (authStore.isLoggedIn) {
+    chatStore.connect()
     await notificationStore.refreshUnread().catch(() => undefined)
   }
 })

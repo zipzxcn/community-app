@@ -16,6 +16,9 @@
         <div class="user-profile__actions">
           <a-tag v-if="profile.mutualFollow" color="green">互关</a-tag>
           <a-tag v-else-if="profile.followed" color="arcoblue">已关注</a-tag>
+          <RouterLink v-if="canChat" :to="`/chat?userId=${profile.id}`">
+            <a-button>发私信</a-button>
+          </RouterLink>
           <a-button
             v-if="canFollow"
             :type="profile.followed ? 'secondary' : 'primary'"
@@ -75,6 +78,7 @@ const profile = ref<UserProfile | null>(null)
 const posts = ref<PostListItem[]>([])
 const pageState = reactive({ page: 1, size: 10, total: 0 })
 const canFollow = computed(() => authStore.isLoggedIn && authStore.userInfo?.id !== props.userId)
+const canChat = computed(() => canFollow.value && profile.value?.mutualFollow)
 
 async function loadProfile() {
   loading.value = true

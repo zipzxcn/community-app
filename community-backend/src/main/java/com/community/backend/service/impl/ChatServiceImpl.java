@@ -25,6 +25,7 @@ import com.community.backend.service.NotificationService;
 import com.community.backend.vo.chat.ChatMessageVo;
 import com.community.backend.vo.chat.ChatThreadVo;
 import com.community.backend.vo.user.UserSummaryVo;
+import com.community.backend.websocket.ChatPushService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,19 +51,22 @@ public class ChatServiceImpl implements ChatService {
     private final UserFollowMapper userFollowMapper;
     private final AppUserMapper appUserMapper;
     private final NotificationService notificationService;
+    private final ChatPushService chatPushService;
 
     public ChatServiceImpl(ChatThreadMapper chatThreadMapper,
                            ChatThreadUserMapper chatThreadUserMapper,
                            ChatMessageMapper chatMessageMapper,
                            UserFollowMapper userFollowMapper,
                            AppUserMapper appUserMapper,
-                           NotificationService notificationService) {
+                           NotificationService notificationService,
+                           ChatPushService chatPushService) {
         this.chatThreadMapper = chatThreadMapper;
         this.chatThreadUserMapper = chatThreadUserMapper;
         this.chatMessageMapper = chatMessageMapper;
         this.userFollowMapper = userFollowMapper;
         this.appUserMapper = appUserMapper;
         this.notificationService = notificationService;
+        this.chatPushService = chatPushService;
     }
 
     /**
@@ -75,49 +79,57 @@ public class ChatServiceImpl implements ChatService {
         long safePage = page == null || page < 1 ? 1 : page;
         long safeSize = size == null || size < 1 ? 20 : Math.min(size, 50);
 
-        Page<ChatThread> pager = new Page<>(safePage, safeSize);
-        Page<ChatThread> result = chatThreadMapper.selectPage(pager, new LambdaQueryWrapper<ChatThread>()
+        List<ChatThread> existingThreads = chatThreadMapper.selectList(new LambdaQueryWrapper<ChatThread>()
                 .and(w -> w.eq(ChatThread::getUserAId, currentUserId).or().eq(ChatThread::getUserBId, currentUserId))
                 .orderByDesc(ChatThread::getLastMessageAt)
                 .orderByDesc(ChatThread::getUpdatedAt));
-
-        if (result.getRecords().isEmpty()) {
-            return PageResponse.<ChatThreadVo>builder()
-                    .list(Collections.emptyList())
-                    .page(result.getCurrent())
-                    .size(result.getSize())
-                    .total(result.getTotal())
-                    .hasMore(Boolean.FALSE)
-                    .build();
-        }
-
-        List<Long> threadIds = result.getRecords().stream().map(ChatThread::getId).toList();
+        List<Long> threadIds = existingThreads.stream().map(ChatThread::getId).toList();
         Map<Long, ChatThreadUser> threadUserMap = loadThreadUserMap(currentUserId, threadIds);
-        Set<Long> peerIds = result.getRecords().stream().map(thread -> getPeerId(thread, currentUserId)).collect(Collectors.toSet());
-        Map<Long, UserSummaryVo> peerMap = loadUserSummaryMap(new ArrayList<>(peerIds));
+        Set<Long> existingPeerIds = existingThreads.stream()
+                .map(thread -> getPeerId(thread, currentUserId))
+                .collect(Collectors.toSet());
+        List<Long> mutualPeerIds = loadMutualOrderedIds(currentUserId);
+        Set<Long> allPeerIds = mutualPeerIds.stream().collect(Collectors.toSet());
+        allPeerIds.addAll(existingPeerIds);
+        Map<Long, UserSummaryVo> peerMap = loadUserSummaryMap(new ArrayList<>(allPeerIds));
 
         List<ChatThreadVo> list = new ArrayList<>();
-        for (ChatThread thread : result.getRecords()) {
+        for (ChatThread thread : existingThreads) {
             ChatThread refreshed = refreshThreadStatusByMutual(thread, currentUserId);
-            Long peerId = getPeerId(refreshed, currentUserId);
-            ChatThreadUser threadUser = threadUserMap.get(refreshed.getId());
+            list.add(toThreadVo(currentUserId, refreshed, threadUserMap.get(refreshed.getId()), peerMap.get(getPeerId(refreshed, currentUserId))));
+        }
 
+        for (Long peerId : mutualPeerIds) {
+            if (existingPeerIds.contains(peerId)) {
+                continue;
+            }
             ChatThreadVo vo = new ChatThreadVo();
-            vo.setThreadId(refreshed.getId());
-            vo.setStatus(refreshed.getStatus());
-            vo.setLastMessagePreview(refreshed.getLastMessagePreview());
-            vo.setLastMessageAt(refreshed.getLastMessageAt());
-            vo.setUnreadCount(threadUser == null || threadUser.getUnreadCount() == null ? 0 : threadUser.getUnreadCount());
+            vo.setThreadId(null);
+            vo.setStatus("ACTIVE");
+            vo.setUnreadCount(0);
             vo.setPeerUser(peerMap.get(peerId));
             list.add(vo);
         }
 
+        long total = list.size();
+        int from = (int) Math.max((safePage - 1) * safeSize, 0);
+        if (from >= list.size()) {
+            return PageResponse.<ChatThreadVo>builder()
+                    .list(Collections.emptyList())
+                    .page(safePage)
+                    .size(safeSize)
+                    .total(total)
+                    .hasMore(Boolean.FALSE)
+                    .build();
+        }
+        int to = (int) Math.min(from + safeSize, list.size());
+
         return PageResponse.<ChatThreadVo>builder()
-                .list(list)
-                .page(result.getCurrent())
-                .size(result.getSize())
-                .total(result.getTotal())
-                .hasMore(result.getCurrent() * result.getSize() < result.getTotal())
+                .list(list.subList(from, to))
+                .page(safePage)
+                .size(safeSize)
+                .total(total)
+                .hasMore(to < list.size())
                 .build();
     }
 
@@ -161,15 +173,15 @@ public class ChatServiceImpl implements ChatService {
             thread = refreshThreadStatusByMutual(thread, currentUserId);
         }
 
-        ChatThreadUser currentThreadUser = getThreadUser(thread.getId(), currentUserId);
-        ChatThreadVo vo = new ChatThreadVo();
-        vo.setThreadId(thread.getId());
-        vo.setStatus(thread.getStatus());
-        vo.setLastMessagePreview(thread.getLastMessagePreview());
-        vo.setLastMessageAt(thread.getLastMessageAt());
-        vo.setUnreadCount(currentThreadUser == null || currentThreadUser.getUnreadCount() == null ? 0 : currentThreadUser.getUnreadCount());
-        vo.setPeerUser(loadUserSummaryMap(List.of(targetUserId)).get(targetUserId));
-        return vo;
+        return toThreadVo(currentUserId, thread, getThreadUser(thread.getId(), currentUserId), loadUserSummaryMap(List.of(targetUserId)).get(targetUserId));
+    }
+
+    @Override
+    public ChatThreadVo getThread(Long currentUserId, Long threadId) {
+        ChatThread thread = mustGetThreadForUser(threadId, currentUserId);
+        ChatThread refreshed = refreshThreadStatusByMutual(thread, currentUserId);
+        Long peerId = getPeerId(refreshed, currentUserId);
+        return toThreadVo(currentUserId, refreshed, getThreadUser(threadId, currentUserId), loadUserSummaryMap(List.of(peerId)).get(peerId));
     }
 
     /**
@@ -293,6 +305,8 @@ public class ChatServiceImpl implements ChatService {
                 "收到一条新消息"
         );
 
+        chatPushService.pushToUser(receiverId, "chat.message", toMessageVo(message));
+
         return toMessageVo(message);
     }
 
@@ -302,7 +316,7 @@ public class ChatServiceImpl implements ChatService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void markRead(Long currentUserId, Long threadId, MarkReadRequest request) {
-        mustGetThreadForUser(threadId, currentUserId);
+        ChatThread thread = mustGetThreadForUser(threadId, currentUserId);
 
         // 标记会话维度已读状态，未读数直接清零
         chatThreadUserMapper.update(null, new LambdaUpdateWrapper<ChatThreadUser>()
@@ -321,6 +335,13 @@ public class ChatServiceImpl implements ChatService {
                 .set(ChatMessage::getIsRead, 1)
                 .set(ChatMessage::getReadAt, LocalDateTime.now())
                 .set(ChatMessage::getStatus, "READ"));
+
+        chatPushService.pushToUser(getPeerId(thread, currentUserId), "chat.read", Map.of(
+                "threadId", threadId,
+                "lastReadMessageId", request.getLastReadMessageId(),
+                "readerId", currentUserId,
+                "readAt", LocalDateTime.now()
+        ));
     }
 
     /**
@@ -394,6 +415,28 @@ public class ChatServiceImpl implements ChatService {
         return currentUserId.equals(thread.getUserAId()) ? thread.getUserBId() : thread.getUserAId();
     }
 
+    private List<Long> loadMutualOrderedIds(Long currentUserId) {
+        List<UserFollow> followingAll = userFollowMapper.selectList(new LambdaQueryWrapper<UserFollow>()
+                .eq(UserFollow::getFollowerId, currentUserId)
+                .eq(UserFollow::getStatus, "ACTIVE")
+                .orderByDesc(UserFollow::getUpdatedAt));
+        if (followingAll.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Long> followingIds = followingAll.stream().map(UserFollow::getFolloweeId).toList();
+        Set<Long> mutualSet = userFollowMapper.selectList(new LambdaQueryWrapper<UserFollow>()
+                        .eq(UserFollow::getFolloweeId, currentUserId)
+                        .eq(UserFollow::getStatus, "ACTIVE")
+                        .in(UserFollow::getFollowerId, followingIds))
+                .stream()
+                .map(UserFollow::getFollowerId)
+                .collect(Collectors.toSet());
+        return followingAll.stream()
+                .map(UserFollow::getFolloweeId)
+                .filter(mutualSet::contains)
+                .toList();
+    }
+
     /**
      * 确保 thread_user 行存在，保障未读统计可更新。
      */
@@ -453,6 +496,17 @@ public class ChatServiceImpl implements ChatService {
                     return vo;
                 })
                 .collect(Collectors.toMap(UserSummaryVo::getId, Function.identity(), (a, b) -> a, LinkedHashMap::new));
+    }
+
+    private ChatThreadVo toThreadVo(Long currentUserId, ChatThread thread, ChatThreadUser threadUser, UserSummaryVo peerUser) {
+        ChatThreadVo vo = new ChatThreadVo();
+        vo.setThreadId(thread.getId());
+        vo.setStatus(thread.getStatus());
+        vo.setLastMessagePreview(thread.getLastMessagePreview());
+        vo.setLastMessageAt(thread.getLastMessageAt());
+        vo.setUnreadCount(threadUser == null || threadUser.getUnreadCount() == null ? 0 : threadUser.getUnreadCount());
+        vo.setPeerUser(peerUser);
+        return vo;
     }
 
     /**
