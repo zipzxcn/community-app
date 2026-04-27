@@ -1,21 +1,65 @@
 <template>
-  <div class="auth-page">
-    <a-card class="auth-card" title="注册">
-      <a-form :model="form" layout="vertical">
-        <a-form-item field="username" label="用户名">
-          <a-input v-model="form.username" placeholder="请输入用户名" />
-        </a-form-item>
-        <a-form-item field="nickname" label="昵称">
-          <a-input v-model="form.nickname" placeholder="请输入昵称" />
-        </a-form-item>
-        <a-form-item field="password" label="密码">
-          <a-input-password v-model="form.password" placeholder="请输入密码" />
-        </a-form-item>
-        <a-button type="primary" long :loading="submitting" @click="handleRegister">注册</a-button>
-      </a-form>
-      <p class="auth-tip">已有账号？<RouterLink to="/login">去登录</RouterLink></p>
-    </a-card>
-  </div>
+  <section class="auth-page">
+    <div class="auth-page__shell">
+      <div class="auth-page__hero">
+        <p class="auth-page__eyebrow">Join Community</p>
+        <h1>创建账号，开始你的第一条内容</h1>
+        <p class="auth-page__desc">
+          注册后即可发布帖子、参与评论、建立关注关系，并在个人主页中管理自己的内容、互动记录与消息提醒。
+        </p>
+
+        <div class="auth-page__feature-list">
+          <article class="auth-page__feature-card">
+            <strong>发布内容</strong>
+            <span>支持标题、正文、封面、标签、附件与草稿流程</span>
+          </article>
+          <article class="auth-page__feature-card">
+            <strong>建立关系</strong>
+            <span>搜索用户、关注作者、查看粉丝与互关好友</span>
+          </article>
+          <article class="auth-page__feature-card">
+            <strong>接收提醒</strong>
+            <span>查看通知中心、聊天消息与浏览历史</span>
+          </article>
+        </div>
+
+        <div class="auth-page__tips">
+          <span class="app-chip">发帖创作</span>
+          <span class="app-chip">关注互动</span>
+          <span class="app-chip">个人主页</span>
+        </div>
+      </div>
+
+      <a-card class="auth-card" :bordered="false">
+        <div class="auth-card__head">
+          <p class="auth-page__eyebrow">Create Account</p>
+          <h2>开始注册</h2>
+          <span>填写基础资料，注册后即可登录进入社区。</span>
+        </div>
+
+        <a-form :model="form" layout="vertical" class="auth-card__form">
+          <a-form-item field="username" label="用户名">
+            <a-input v-model="form.username" placeholder="请输入用户名" allow-clear />
+          </a-form-item>
+          <a-form-item field="nickname" label="昵称">
+            <a-input v-model="form.nickname" placeholder="请输入昵称" allow-clear />
+          </a-form-item>
+          <a-form-item field="password" label="密码">
+            <a-input-password v-model="form.password" placeholder="请输入密码" allow-clear />
+          </a-form-item>
+
+          <div class="auth-card__submit">
+            <a-button type="primary" long size="large" :loading="submitting" @click="handleRegister">注册账号</a-button>
+          </div>
+        </a-form>
+
+        <div class="auth-card__footer">
+          <span>已有账号？</span>
+          <RouterLink to="/login">立即登录</RouterLink>
+        </div>
+      </a-card>
+    </div>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -52,18 +96,166 @@ async function handleRegister() {
 
 <style scoped lang="scss">
 .auth-page {
+  min-height: calc(100vh - 220px);
+  display: grid;
+  align-items: center;
+}
+
+.auth-page__shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(380px, 420px);
+  gap: 24px;
+  overflow: hidden;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 8% 12%, rgba(15, 118, 110, 0.14), transparent 28%),
+    radial-gradient(circle at 85% 15%, rgba(245, 158, 11, 0.12), transparent 24%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.9));
+  border: 1px solid var(--app-border-color);
+  border-radius: var(--app-radius-xl);
+  box-shadow: var(--app-shadow-lg);
+}
+
+.auth-page__hero,
+.auth-card {
+  position: relative;
+  z-index: 1;
+}
+
+.auth-page__hero {
+  display: grid;
+  align-content: center;
+  gap: 18px;
+  padding: 10px 6px 10px 6px;
+}
+
+.auth-page__eyebrow {
+  margin: 0;
+  color: var(--app-primary);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.auth-page__hero h1 {
+  margin: 0;
+  color: var(--app-text-1);
+  font-size: clamp(34px, 5vw, 56px);
+  line-height: 1.06;
+}
+
+.auth-page__desc {
+  max-width: 620px;
+  margin: 0;
+  color: var(--app-text-3);
+  line-height: 1.85;
+}
+
+.auth-page__feature-list {
+  display: grid;
+  gap: 12px;
+  max-width: 620px;
+}
+
+.auth-page__feature-card {
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  background: rgba(255, 255, 255, 0.66);
+  border: 1px solid var(--app-border-color);
+  border-radius: var(--app-radius-md);
+  box-shadow: var(--app-shadow-xs);
+}
+
+.auth-page__feature-card strong {
+  color: var(--app-text-1);
+  font-size: 15px;
+}
+
+.auth-page__feature-card span {
+  color: var(--app-text-3);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.auth-page__tips {
   display: flex;
-  justify-content: center;
-  padding-top: 48px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .auth-card {
-  width: 420px;
+  align-self: center;
+  padding: 10px;
 }
 
-.auth-tip {
-  margin: 16px 0 0;
-  color: #64748b;
-  text-align: center;
+.auth-card__head {
+  display: grid;
+  gap: 6px;
+}
+
+.auth-card__head h2,
+.auth-card__head span {
+  margin: 0;
+}
+
+.auth-card__head h2 {
+  color: var(--app-text-1);
+  font-size: 28px;
+}
+
+.auth-card__head span {
+  color: var(--app-text-3);
+  line-height: 1.7;
+}
+
+.auth-card__form {
+  margin-top: 20px;
+}
+
+.auth-card__submit {
+  margin-top: 6px;
+}
+
+.auth-card__footer {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 18px;
+  color: var(--app-text-3);
+  font-size: 14px;
+}
+
+.auth-card__footer a {
+  color: var(--app-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+@media (max-width: 920px) {
+  .auth-page__shell {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-page__hero {
+    padding: 4px 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .auth-page {
+    min-height: auto;
+  }
+
+  .auth-page__shell {
+    padding: 18px;
+    border-radius: var(--app-radius-lg);
+  }
+
+  .auth-page__hero h1 {
+    font-size: clamp(28px, 8vw, 38px);
+  }
 }
 </style>

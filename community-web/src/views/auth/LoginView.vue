@@ -1,18 +1,62 @@
 <template>
-  <div class="auth-page">
-    <a-card class="auth-card" title="登录">
-      <a-form :model="form" layout="vertical">
-        <a-form-item field="username" label="用户名">
-          <a-input v-model="form.username" placeholder="请输入用户名" />
-        </a-form-item>
-        <a-form-item field="password" label="密码">
-          <a-input-password v-model="form.password" placeholder="请输入密码" />
-        </a-form-item>
-        <a-button type="primary" long :loading="submitting" @click="handleLogin">登录</a-button>
-      </a-form>
-      <p class="auth-tip">还没有账号？<RouterLink to="/register">去注册</RouterLink></p>
-    </a-card>
-  </div>
+  <section class="auth-page">
+    <div class="auth-page__shell">
+      <div class="auth-page__hero">
+        <p class="auth-page__eyebrow">Welcome Back</p>
+        <h1>登录后继续你的社区节奏</h1>
+        <p class="auth-page__desc">
+          回到帖子流、处理通知消息、继续私信聊天，并在个人中心查看自己的内容、收藏、点赞与关注关系。
+        </p>
+
+        <div class="auth-page__feature-list">
+          <article class="auth-page__feature-card">
+            <strong>内容发现</strong>
+            <span>查看最新帖子、热门内容和作者主页</span>
+          </article>
+          <article class="auth-page__feature-card">
+            <strong>互动关系</strong>
+            <span>评论、点赞、收藏、关注与互关沟通</span>
+          </article>
+          <article class="auth-page__feature-card">
+            <strong>个人空间</strong>
+            <span>管理资料、帖子、草稿、历史与通知</span>
+          </article>
+        </div>
+
+        <div class="auth-page__tips">
+          <span class="app-chip">社区内容流</span>
+          <span class="app-chip">消息触达</span>
+          <span class="app-chip">创作发布</span>
+        </div>
+      </div>
+
+      <a-card class="auth-card" :bordered="false">
+        <div class="auth-card__head">
+          <p class="auth-page__eyebrow">Account Login</p>
+          <h2>欢迎回来</h2>
+          <span>输入你的账号信息，继续浏览和互动。</span>
+        </div>
+
+        <a-form :model="form" layout="vertical" class="auth-card__form">
+          <a-form-item field="username" label="用户名">
+            <a-input v-model="form.username" placeholder="请输入用户名" allow-clear />
+          </a-form-item>
+          <a-form-item field="password" label="密码">
+            <a-input-password v-model="form.password" placeholder="请输入密码" allow-clear />
+          </a-form-item>
+
+          <div class="auth-card__submit">
+            <a-button type="primary" long size="large" :loading="submitting" @click="handleLogin">登录</a-button>
+          </div>
+        </a-form>
+
+        <div class="auth-card__footer">
+          <span>还没有账号？</span>
+          <RouterLink to="/register">立即注册</RouterLink>
+        </div>
+      </a-card>
+    </div>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -50,18 +94,166 @@ async function handleLogin() {
 
 <style scoped lang="scss">
 .auth-page {
+  min-height: calc(100vh - 220px);
+  display: grid;
+  align-items: center;
+}
+
+.auth-page__shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(380px, 420px);
+  gap: 24px;
+  overflow: hidden;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(15, 118, 110, 0.14), transparent 28%),
+    radial-gradient(circle at 85% 15%, rgba(37, 99, 235, 0.12), transparent 22%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.9));
+  border: 1px solid var(--app-border-color);
+  border-radius: var(--app-radius-xl);
+  box-shadow: var(--app-shadow-lg);
+}
+
+.auth-page__hero,
+.auth-card {
+  position: relative;
+  z-index: 1;
+}
+
+.auth-page__hero {
+  display: grid;
+  align-content: center;
+  gap: 18px;
+  padding: 10px 6px 10px 6px;
+}
+
+.auth-page__eyebrow {
+  margin: 0;
+  color: var(--app-primary);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.auth-page__hero h1 {
+  margin: 0;
+  color: var(--app-text-1);
+  font-size: clamp(34px, 5vw, 56px);
+  line-height: 1.06;
+}
+
+.auth-page__desc {
+  max-width: 620px;
+  margin: 0;
+  color: var(--app-text-3);
+  line-height: 1.85;
+}
+
+.auth-page__feature-list {
+  display: grid;
+  gap: 12px;
+  max-width: 620px;
+}
+
+.auth-page__feature-card {
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  background: rgba(255, 255, 255, 0.66);
+  border: 1px solid var(--app-border-color);
+  border-radius: var(--app-radius-md);
+  box-shadow: var(--app-shadow-xs);
+}
+
+.auth-page__feature-card strong {
+  color: var(--app-text-1);
+  font-size: 15px;
+}
+
+.auth-page__feature-card span {
+  color: var(--app-text-3);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.auth-page__tips {
   display: flex;
-  justify-content: center;
-  padding-top: 48px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .auth-card {
-  width: 420px;
+  align-self: center;
+  padding: 10px;
 }
 
-.auth-tip {
-  margin: 16px 0 0;
-  color: #64748b;
-  text-align: center;
+.auth-card__head {
+  display: grid;
+  gap: 6px;
+}
+
+.auth-card__head h2,
+.auth-card__head span {
+  margin: 0;
+}
+
+.auth-card__head h2 {
+  color: var(--app-text-1);
+  font-size: 28px;
+}
+
+.auth-card__head span {
+  color: var(--app-text-3);
+  line-height: 1.7;
+}
+
+.auth-card__form {
+  margin-top: 20px;
+}
+
+.auth-card__submit {
+  margin-top: 6px;
+}
+
+.auth-card__footer {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 18px;
+  color: var(--app-text-3);
+  font-size: 14px;
+}
+
+.auth-card__footer a {
+  color: var(--app-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+@media (max-width: 920px) {
+  .auth-page__shell {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-page__hero {
+    padding: 4px 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .auth-page {
+    min-height: auto;
+  }
+
+  .auth-page__shell {
+    padding: 18px;
+    border-radius: var(--app-radius-lg);
+  }
+
+  .auth-page__hero h1 {
+    font-size: clamp(28px, 8vw, 38px);
+  }
 }
 </style>
