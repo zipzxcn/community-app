@@ -110,7 +110,17 @@
             </div>
           </article>
         </div>
-        <a-empty v-else description="当前筛选条件下暂无通知" />
+        <div v-else class="app-empty-state app-empty-state--center">
+          <p class="app-empty-state__eyebrow">No Notifications</p>
+          <h3 class="app-empty-state__title">当前筛选条件下暂无通知</h3>
+          <p class="app-empty-state__desc">你可以清空筛选条件重新查看，也可以继续使用聊天、关注、评论等功能来触发更多动态。</p>
+          <div class="app-empty-state__actions">
+            <a-button type="primary" @click="resetFilters">重置筛选</a-button>
+            <RouterLink to="/chat">
+              <a-button>去聊天页</a-button>
+            </RouterLink>
+          </div>
+        </div>
       </a-spin>
 
       <div v-if="page.total > page.size" class="notification-center__pager">
@@ -294,6 +304,15 @@ async function handleFilterChange() {
 }
 
 async function handleKeywordSearch() {
+  page.page = 1
+  await syncRoute()
+  await loadNotifications()
+}
+
+async function resetFilters() {
+  typeFilter.value = 'ALL'
+  readFilter.value = 'ALL'
+  keyword.value = ''
   page.page = 1
   await syncRoute()
   await loadNotifications()

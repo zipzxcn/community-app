@@ -63,7 +63,17 @@
               </div>
             </button>
           </div>
-          <a-empty v-else description="暂无会话，先去互关好友主页发起聊天" />
+          <div v-else class="app-empty-state app-empty-state--center">
+            <p class="app-empty-state__eyebrow">Empty Inbox</p>
+            <h3 class="app-empty-state__title">你还没有任何会话</h3>
+            <p class="app-empty-state__desc">去用户主页找到互关好友，就可以直接发起聊天。实时通道恢复后，新消息会自动同步到这里。</p>
+            <div class="app-empty-state__actions">
+              <RouterLink to="/users/search">
+                <a-button type="primary">去找人</a-button>
+              </RouterLink>
+              <a-button @click="refreshCurrent">手动刷新</a-button>
+            </div>
+          </div>
         </a-spin>
       </a-card>
 
@@ -133,7 +143,11 @@
           </div>
         </template>
 
-        <a-empty v-else description="请选择左侧会话，或从用户主页发起新的私信" />
+        <div v-else class="app-empty-state app-empty-state--center chat-view__empty-panel">
+          <p class="app-empty-state__eyebrow">Select Thread</p>
+          <h3 class="app-empty-state__title">请选择一个会话开始查看消息</h3>
+          <p class="app-empty-state__desc">如果左侧没有会话，可以先从用户主页发起私信，或等待新的聊天通知进入列表。</p>
+        </div>
       </a-card>
     </div>
   </section>
@@ -542,6 +556,11 @@ onUnmounted(() => {
   min-height: 680px;
   border-radius: 22px;
   box-shadow: 0 16px 48px rgba(15, 23, 42, 0.06);
+}
+
+.chat-view__empty-panel {
+  min-height: 420px;
+  align-content: center;
 }
 
 .chat-view__panel-head {

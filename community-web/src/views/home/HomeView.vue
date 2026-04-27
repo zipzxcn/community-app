@@ -31,6 +31,11 @@
         <RouterLink to="/users/search">
           <a-button size="large">去找人</a-button>
         </RouterLink>
+        <div class="home-view__quick-links">
+          <RouterLink v-if="authStore.isLoggedIn" to="/chat">私信聊天</RouterLink>
+          <RouterLink v-if="authStore.isLoggedIn" to="/notifications">消息提醒</RouterLink>
+          <RouterLink v-if="authStore.isLoggedIn" to="/me">个人中心</RouterLink>
+        </div>
       </div>
     </div>
 
@@ -54,7 +59,17 @@
       <div v-if="posts.length" class="home-view__list">
         <PostCard v-for="post in posts" :key="post.id" :post="post" />
       </div>
-      <a-empty v-else description="暂无帖子，发布第一条内容吧" />
+      <div v-else class="app-empty-state app-empty-state--center">
+        <p class="app-empty-state__eyebrow">Empty Feed</p>
+        <h3 class="app-empty-state__title">暂时还没有帖子内容</h3>
+        <p class="app-empty-state__desc">你可以先发第一条帖子，或者切换搜索关键词与排序条件，再看看是否有内容出现。</p>
+        <div class="app-empty-state__actions">
+          <RouterLink v-if="authStore.isLoggedIn" to="/posts/publish">
+            <a-button type="primary">发布第一条帖子</a-button>
+          </RouterLink>
+          <a-button @click="reload">重新加载</a-button>
+        </div>
+      </div>
     </a-spin>
 
     <div v-if="page.total > page.size" class="home-view__pager">
@@ -209,6 +224,25 @@ onMounted(loadPosts)
   gap: 12px;
 }
 
+.home-view__quick-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.home-view__quick-links a {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  color: #334155;
+  font-size: 13px;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 999px;
+}
+
 .home-view__filters {
   border-radius: 24px;
 }
@@ -271,6 +305,10 @@ onMounted(loadPosts)
     :deep(.arco-card-body) {
       padding: 18px;
     }
+  }
+
+  .home-view__quick-links {
+    width: 100%;
   }
 }
 </style>

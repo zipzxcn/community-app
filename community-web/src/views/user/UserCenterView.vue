@@ -130,7 +130,19 @@
               </div>
             </article>
           </div>
-          <a-empty v-else :description="currentPostMeta.emptyText" />
+          <div v-else class="app-empty-state">
+            <p class="app-empty-state__eyebrow">{{ currentPostMeta.eyebrow }}</p>
+            <h3 class="app-empty-state__title">{{ currentPostMeta.title }}</h3>
+            <p class="app-empty-state__desc">{{ currentPostMeta.emptyText }}</p>
+            <div class="app-empty-state__actions">
+              <RouterLink v-if="activeTab === 'posts'" to="/posts/publish">
+                <a-button type="primary">去发布</a-button>
+              </RouterLink>
+              <RouterLink v-else to="/">
+                <a-button>回到首页</a-button>
+              </RouterLink>
+            </div>
+          </div>
           <div v-if="currentPage.total > currentPage.size" class="user-center__pager">
             <a-pagination
               :current="currentPage.page"
@@ -177,7 +189,16 @@
               </a-button>
             </article>
           </div>
-          <a-empty v-else :description="emptyUserText" />
+          <div v-else class="app-empty-state">
+            <p class="app-empty-state__eyebrow">{{ currentUserMeta.eyebrow }}</p>
+            <h3 class="app-empty-state__title">{{ currentUserMeta.title }}</h3>
+            <p class="app-empty-state__desc">{{ emptyUserText }}</p>
+            <div class="app-empty-state__actions">
+              <RouterLink to="/users/search">
+                <a-button type="primary">去找人</a-button>
+              </RouterLink>
+            </div>
+          </div>
           <div v-if="currentUserPage.total > currentUserPage.size" class="user-center__pager">
             <a-pagination
               :current="currentUserPage.page"

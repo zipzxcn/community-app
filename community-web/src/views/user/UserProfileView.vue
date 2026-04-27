@@ -58,7 +58,19 @@
       <div v-if="posts.length" class="user-profile__posts">
         <PostCard v-for="post in posts" :key="post.id" :post="post" />
       </div>
-      <a-empty v-else-if="!loading" description="暂无公开帖子" />
+      <div v-else-if="!loading" class="app-empty-state">
+        <p class="app-empty-state__eyebrow">Profile Posts</p>
+        <h3 class="app-empty-state__title">这个用户还没有公开帖子</h3>
+        <p class="app-empty-state__desc">你可以先关注对方、继续浏览其他用户，或者回到首页看看当前社区里还有哪些内容。</p>
+        <div class="app-empty-state__actions">
+          <RouterLink to="/">
+            <a-button type="primary">回到首页</a-button>
+          </RouterLink>
+          <RouterLink to="/users/search">
+            <a-button>继续找人</a-button>
+          </RouterLink>
+        </div>
+      </div>
 
       <div v-if="pageState.total > pageState.size" class="user-profile__pager">
         <a-pagination
