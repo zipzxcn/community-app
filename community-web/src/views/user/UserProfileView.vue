@@ -1,85 +1,121 @@
 <template>
-  <section class="user-profile">
+  <section class="user-profile app-page">
     <a-spin :loading="loading">
-      <div v-if="profile" class="user-profile__hero">
-        <div class="user-profile__hero-main">
-          <div class="user-profile__identity">
-            <a-avatar :size="72" class="user-profile__avatar">
-              <img v-if="profile.avatarUrl" :src="resolveAssetUrl(profile.avatarUrl)" alt="" />
-              <template v-else>{{ (profile.nickname || profile.username).slice(0, 1).toUpperCase() }}</template>
-            </a-avatar>
-            <div>
-              <p class="user-profile__eyebrow">Profile</p>
-              <h1>{{ profile.nickname || profile.username }}</h1>
-              <p>@{{ profile.username }}</p>
+      <template v-if="profile">
+        <div class="user-profile__hero app-hero">
+          <div class="user-profile__hero-main">
+            <div class="user-profile__identity">
+              <a-avatar :size="82" class="user-profile__avatar">
+                <img v-if="profile.avatarUrl" :src="resolveAssetUrl(profile.avatarUrl)" alt="" />
+                <template v-else>{{ displayInitial }}</template>
+              </a-avatar>
+
+              <div class="user-profile__identity-copy">
+                <p class="user-profile__eyebrow">Public Profile</p>
+                <h1>{{ profile.nickname || profile.username }}</h1>
+                <p>@{{ profile.username }}</p>
+                <span>{{ profile.bio || '这个用户还没有填写简介。' }}</span>
+              </div>
+            </div>
+
+            <div class="app-stat-grid">
+              <article class="app-stat-card">
+                <strong>{{ profile.postCount }}</strong>
+                <span>公开帖子</span>
+                <small>当前可见内容数量</small>
+              </article>
+              <article class="app-stat-card">
+                <strong>{{ profile.followingCount }}</strong>
+                <span>TA 的关注</span>
+                <small>正在持续关注的作者与用户</small>
+              </article>
+              <article class="app-stat-card">
+                <strong>{{ profile.followerCount }}</strong>
+                <span>TA 的粉丝</span>
+                <small>已建立关注关系的用户数量</small>
+              </article>
             </div>
           </div>
-          <div class="user-profile__hero-cards">
-            <article>
-              <strong>{{ profile.postCount }}</strong>
-              <span>公开帖子</span>
-            </article>
-            <article>
-              <strong>{{ profile.followingCount }}</strong>
-              <span>TA 的关注</span>
-            </article>
-            <article>
-              <strong>{{ profile.followerCount }}</strong>
-              <span>TA 的粉丝</span>
-            </article>
+
+          <div class="user-profile__side">
+            <div class="app-panel user-profile__action-card">
+              <p class="user-profile__eyebrow">Relationship</p>
+              <h3>与 TA 建立连接</h3>
+              <div class="user-profile__status">
+                <a-tag v-if="profile.mutualFollow" color="green">互关好友</a-tag>
+                <a-tag v-else-if="profile.followed" color="arcoblue">已关注</a-tag>
+                <a-tag v-else color="gray">暂未关注</a-tag>
+              </div>
+
+              <div class="user-profile__actions">
+                <RouterLink v-if="canChat" :to="`/chat?userId=${profile.id}`">
+                  <a-button long>发私信</a-button>
+                </RouterLink>
+                <a-button
+                  v-if="canFollow"
+                  :type="profile.followed ? 'secondary' : 'primary'"
+                  long
+                  :loading="followLoading"
+                  @click="toggleFollow"
+                >
+                  {{ profile.followed ? '取消关注' : '关注 TA' }}
+                </a-button>
+                <RouterLink to="/users/search">
+                  <a-button long>继续找人</a-button>
+                </RouterLink>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="user-profile__actions">
-          <a-tag v-if="profile.mutualFollow" color="green">互关</a-tag>
-          <a-tag v-else-if="profile.followed" color="arcoblue">已关注</a-tag>
-          <RouterLink v-if="canChat" :to="`/chat?userId=${profile.id}`">
-            <a-button>发私信</a-button>
-          </RouterLink>
-          <a-button
-            v-if="canFollow"
-            :type="profile.followed ? 'secondary' : 'primary'"
-            :loading="followLoading"
-            @click="toggleFollow"
-          >
-            {{ profile.followed ? '取消关注' : '关注' }}
-          </a-button>
-        </div>
-      </div>
 
-      <div v-if="profile" class="user-profile__summary">
-        <p>{{ profile.bio || '这个用户还没有填写简介。' }}</p>
-        <div class="user-profile__stats">
-          <span>帖子 {{ profile.postCount }}</span>
-          <span>关注 {{ profile.followingCount }}</span>
-          <span>粉丝 {{ profile.followerCount }}</span>
-        </div>
-      </div>
+        <div class="user-profile__summary-grid">
+          <section class="app-panel user-profile__summary-card">
+            <p class="user-profile__eyebrow">Profile Summary</p>
+            <h3>个人简介</h3>
+            <p>{{ profile.bio || '这个用户还没有填写简介。' }}</p>
+          </section>
 
-      <div v-if="posts.length" class="user-profile__posts">
-        <PostCard v-for="post in posts" :key="post.id" :post="post" />
-      </div>
-      <div v-else-if="!loading" class="app-empty-state">
-        <p class="app-empty-state__eyebrow">Profile Posts</p>
-        <h3 class="app-empty-state__title">这个用户还没有公开帖子</h3>
-        <p class="app-empty-state__desc">你可以先关注对方、继续浏览其他用户，或者回到首页看看当前社区里还有哪些内容。</p>
-        <div class="app-empty-state__actions">
-          <RouterLink to="/">
-            <a-button type="primary">回到首页</a-button>
-          </RouterLink>
-          <RouterLink to="/users/search">
-            <a-button>继续找人</a-button>
-          </RouterLink>
+          <section class="app-panel user-profile__summary-card">
+            <p class="user-profile__eyebrow">Quick Stats</p>
+            <h3>关系概览</h3>
+            <div class="user-profile__stats">
+              <span class="app-chip">帖子 {{ profile.postCount }}</span>
+              <span class="app-chip">关注 {{ profile.followingCount }}</span>
+              <span class="app-chip">粉丝 {{ profile.followerCount }}</span>
+            </div>
+          </section>
         </div>
-      </div>
 
-      <div v-if="pageState.total > pageState.size" class="user-profile__pager">
-        <a-pagination
-          :current="pageState.page"
-          :page-size="pageState.size"
-          :total="pageState.total"
-          @change="changePage"
-        />
-      </div>
+        <div class="app-section-head">
+          <div class="app-section-head__main">
+            <p class="app-section-head__eyebrow">Posts</p>
+            <h2 class="app-section-head__title">TA 的公开内容</h2>
+            <p class="app-section-head__desc">继续浏览 TA 已经公开发布的帖子，查看创作内容与互动热度。</p>
+          </div>
+          <strong class="app-section-head__value">{{ pageState.total }}</strong>
+        </div>
+
+        <div v-if="posts.length" class="user-profile__posts">
+          <PostCard v-for="post in posts" :key="post.id" :post="post" />
+        </div>
+        <div v-else-if="!loading" class="app-empty-state">
+          <p class="app-empty-state__eyebrow">Profile Posts</p>
+          <h3 class="app-empty-state__title">这个用户还没有公开帖子</h3>
+          <p class="app-empty-state__desc">你可以先关注对方、继续浏览其他用户，或者回到首页看看当前社区里还有哪些内容。</p>
+          <div class="app-empty-state__actions">
+            <RouterLink to="/">
+              <a-button type="primary">回到首页</a-button>
+            </RouterLink>
+            <RouterLink to="/users/search">
+              <a-button>继续找人</a-button>
+            </RouterLink>
+          </div>
+        </div>
+
+        <div v-if="pageState.total > pageState.size" class="user-profile__pager">
+          <a-pagination :current="pageState.page" :page-size="pageState.size" :total="pageState.total" @change="changePage" />
+        </div>
+      </template>
     </a-spin>
   </section>
 </template>
@@ -107,6 +143,7 @@ const posts = ref<PostListItem[]>([])
 const pageState = reactive({ page: 1, size: 10, total: 0 })
 const canFollow = computed(() => authStore.isLoggedIn && authStore.userInfo?.id !== props.userId)
 const canChat = computed(() => canFollow.value && profile.value?.mutualFollow)
+const displayInitial = computed(() => (profile.value?.nickname || profile.value?.username || 'U').slice(0, 1).toUpperCase())
 
 async function loadProfile() {
   loading.value = true
@@ -162,108 +199,118 @@ watch(
 </script>
 
 <style scoped lang="scss">
-.user-profile {
-  display: grid;
-  gap: 18px;
-}
-
-.user-profile__hero,
-.user-profile__summary {
-  padding: 22px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 20px;
-}
-
 .user-profile__hero {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.9fr);
+  gap: 24px;
 }
 
 .user-profile__hero-main {
   display: grid;
-  gap: 18px;
-  flex: 1;
+  gap: 20px;
 }
 
 .user-profile__identity {
   display: flex;
-  align-items: center;
-  gap: 16px;
+  align-items: flex-start;
+  gap: 18px;
 }
 
 .user-profile__avatar {
-  color: #0f766e;
+  flex-shrink: 0;
+  color: var(--app-primary);
   font-weight: 800;
-  background: #ccfbf1;
+  background: linear-gradient(135deg, rgba(204, 251, 241, 0.92), rgba(219, 234, 254, 0.92));
+}
+
+.user-profile__identity-copy {
+  display: grid;
+  gap: 8px;
 }
 
 .user-profile__eyebrow {
-  margin: 0 0 6px;
-  color: #0f766e;
-  font-weight: 800;
-}
-
-.user-profile h1 {
-  margin: 0 0 4px;
-  color: #172033;
-  font-size: 32px;
-}
-
-.user-profile p {
   margin: 0;
-  color: #64748b;
+  color: var(--app-primary);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.user-profile__hero-cards {
+.user-profile__identity-copy h1 {
+  margin: 0;
+  color: var(--app-text-1);
+  font-size: clamp(30px, 5vw, 44px);
+  line-height: 1.08;
+}
+
+.user-profile__identity-copy p,
+.user-profile__identity-copy span {
+  margin: 0;
+  color: var(--app-text-3);
+}
+
+.user-profile__identity-copy span {
+  line-height: 1.8;
+}
+
+.user-profile__action-card {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  max-width: 720px;
+  gap: 14px;
+  align-content: start;
 }
 
-.user-profile__hero-cards article {
-  padding: 16px;
-  background: rgba(248, 250, 252, 0.86);
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 16px;
+.user-profile__action-card h3,
+.user-profile__action-card p {
+  margin: 0;
 }
 
-.user-profile__hero-cards strong,
-.user-profile__hero-cards span {
-  display: block;
+.user-profile__action-card h3 {
+  color: var(--app-text-1);
+  font-size: 22px;
 }
 
-.user-profile__hero-cards strong {
-  color: #172033;
-  font-size: 20px;
-}
-
-.user-profile__hero-cards span {
-  margin-top: 6px;
-  color: #64748b;
-  font-size: 13px;
-}
-
-.user-profile__actions,
-.user-profile__stats {
+.user-profile__status {
   display: flex;
   flex-wrap: wrap;
+  gap: 8px;
+}
+
+.user-profile__actions {
+  display: grid;
   gap: 10px;
 }
 
-.user-profile__summary {
+.user-profile__summary-grid {
   display: grid;
-  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
 }
 
-.user-profile__stats span {
-  padding: 8px 12px;
-  background: #f8fafc;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 8px;
+.user-profile__summary-card {
+  display: grid;
+  gap: 10px;
+}
+
+.user-profile__summary-card h3,
+.user-profile__summary-card p {
+  margin: 0;
+}
+
+.user-profile__summary-card h3 {
+  color: var(--app-text-1);
+  font-size: 20px;
+}
+
+.user-profile__summary-card p:last-child {
+  color: var(--app-text-3);
+  line-height: 1.8;
+}
+
+.user-profile__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .user-profile__posts {
@@ -276,14 +323,17 @@ watch(
   justify-content: center;
 }
 
-@media (max-width: 720px) {
-  .user-profile__hero {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .user-profile__hero-cards {
+@media (max-width: 1080px) {
+  .user-profile__hero,
+  .user-profile__summary-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .user-profile__identity {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>

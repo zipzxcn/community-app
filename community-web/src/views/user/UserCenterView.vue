@@ -1,41 +1,65 @@
 <template>
-  <section class="user-center">
-    <div class="user-center__hero">
+  <section class="user-center app-page">
+    <div class="user-center__hero app-hero">
       <div class="user-center__hero-main">
-        <div class="user-center__profile">
-          <a-avatar :size="68" class="user-center__avatar">
+        <div class="user-center__identity">
+          <a-avatar :size="76" class="user-center__avatar">
             <img v-if="profileForm.avatarUrl" :src="resolveAssetUrl(profileForm.avatarUrl)" alt="" />
             <template v-else>{{ avatarText }}</template>
           </a-avatar>
-          <div>
-            <p class="user-center__eyebrow">Personal Hub</p>
+
+          <div class="user-center__identity-copy">
+            <p class="user-center__eyebrow">Personal Console</p>
             <h1>{{ displayName }}</h1>
-            <p>{{ profileForm.bio || '完善资料后，其他用户能更快了解你。' }}</p>
+            <p>{{ profileForm.bio || '完善你的资料、内容和关系网络，让更多人更快认识你。' }}</p>
+
+            <div class="user-center__identity-chips">
+              <span class="app-chip">我的帖子 {{ profileStats.postCount }}</span>
+              <span class="app-chip">我的关注 {{ profileStats.followingCount }}</span>
+              <span class="app-chip">我的粉丝 {{ profileStats.followerCount }}</span>
+            </div>
           </div>
         </div>
-        <div class="user-center__hero-cards">
-          <article>
+
+        <div class="app-stat-grid">
+          <article class="app-stat-card">
             <strong>{{ profileStats.postCount }}</strong>
-            <span>我的帖子</span>
+            <span>内容产出</span>
+            <small>已发布与可管理的帖子数量</small>
           </article>
-          <article>
+          <article class="app-stat-card">
             <strong>{{ profileStats.followingCount }}</strong>
-            <span>我的关注</span>
+            <span>主动关注</span>
+            <small>你正在持续关注的用户</small>
           </article>
-          <article>
+          <article class="app-stat-card">
             <strong>{{ profileStats.followerCount }}</strong>
-            <span>我的粉丝</span>
+            <span>被关注量</span>
+            <small>对你内容感兴趣的用户</small>
           </article>
         </div>
       </div>
-      <div class="user-center__stats">
-        <span>帖子 {{ profileStats.postCount }}</span>
-        <span>关注 {{ profileStats.followingCount }}</span>
-        <span>粉丝 {{ profileStats.followerCount }}</span>
+
+      <div class="user-center__hero-side">
+        <div class="app-panel user-center__quick-card">
+          <p class="user-center__eyebrow">Quick Actions</p>
+          <h3>快速管理你的社区空间</h3>
+          <div class="user-center__quick-actions">
+            <RouterLink to="/posts/publish">
+              <a-button type="primary" long>发布新帖子</a-button>
+            </RouterLink>
+            <RouterLink to="/drafts">
+              <a-button long>查看草稿箱</a-button>
+            </RouterLink>
+            <RouterLink to="/histories">
+              <a-button long>查看浏览历史</a-button>
+            </RouterLink>
+          </div>
+        </div>
       </div>
     </div>
 
-    <a-card :bordered="false" class="user-center__panel">
+    <a-card :bordered="false" class="user-center__panel app-panel">
       <a-tabs v-model:active-key="activeTab" @change="handleTabChange">
         <a-tab-pane key="profile" title="资料设置" />
         <a-tab-pane key="posts" title="我的帖子" />
@@ -48,41 +72,60 @@
 
       <a-spin :loading="loading">
         <a-form v-if="activeTab === 'profile'" :model="profileForm" layout="vertical" class="user-center__form">
-          <div class="user-center__form-head">
-            <div>
-              <p>资料设置</p>
-              <h2>维护你的昵称、头像和个人简介</h2>
+          <div class="app-section-head">
+            <div class="app-section-head__main">
+              <p class="app-section-head__eyebrow">Profile Settings</p>
+              <h2 class="app-section-head__title">维护你的昵称、头像和个人简介</h2>
+              <p class="app-section-head__desc">资料页是别人了解你的第一入口，建议保持清晰、完整、有辨识度。</p>
             </div>
           </div>
-          <a-form-item field="nickname" label="昵称">
-            <a-input v-model="profileForm.nickname" :max-length="32" show-word-limit />
-          </a-form-item>
-          <a-form-item field="avatarUrl" label="头像">
-            <div class="user-center__avatar-editor">
-              <a-input v-model="profileForm.avatarUrl" placeholder="头像 URL" allow-clear />
-              <label class="user-center__upload">
-                <input type="file" accept="image/*" @change="handleAvatarSelected" />
-                <span>{{ uploadingAvatar ? '上传中' : '上传图片' }}</span>
-              </label>
+
+          <div class="user-center__form-grid">
+            <div class="user-center__profile-preview app-panel">
+              <a-avatar :size="84" class="user-center__avatar">
+                <img v-if="profileForm.avatarUrl" :src="resolveAssetUrl(profileForm.avatarUrl)" alt="" />
+                <template v-else>{{ avatarText }}</template>
+              </a-avatar>
+              <div>
+                <strong>{{ displayName }}</strong>
+                <p>@{{ authStore.userInfo?.username }}</p>
+                <span>{{ profileForm.bio || '完善个人简介后，这里会展示你的自我介绍。' }}</span>
+              </div>
             </div>
-          </a-form-item>
-          <a-form-item field="bio" label="个人简介">
-            <a-textarea v-model="profileForm.bio" :max-length="255" show-word-limit :auto-size="{ minRows: 4, maxRows: 6 }" />
-          </a-form-item>
-          <div class="user-center__actions">
-            <a-button type="primary" :loading="savingProfile" @click="saveProfile">保存资料</a-button>
+
+            <div class="user-center__form-fields">
+              <a-form-item field="nickname" label="昵称">
+                <a-input v-model="profileForm.nickname" :max-length="32" show-word-limit />
+              </a-form-item>
+              <a-form-item field="avatarUrl" label="头像">
+                <div class="user-center__avatar-editor">
+                  <a-input v-model="profileForm.avatarUrl" placeholder="头像 URL" allow-clear />
+                  <label class="user-center__upload">
+                    <input type="file" accept="image/*" @change="handleAvatarSelected" />
+                    <span>{{ uploadingAvatar ? '上传中' : '上传图片' }}</span>
+                  </label>
+                </div>
+              </a-form-item>
+              <a-form-item field="bio" label="个人简介">
+                <a-textarea v-model="profileForm.bio" :max-length="255" show-word-limit :auto-size="{ minRows: 4, maxRows: 6 }" />
+              </a-form-item>
+              <div class="user-center__actions">
+                <a-button type="primary" :loading="savingProfile" @click="saveProfile">保存资料</a-button>
+              </div>
+            </div>
           </div>
         </a-form>
 
         <template v-else-if="isPostTab">
-          <div class="user-center__section-head">
-            <div>
-              <p>{{ currentPostMeta.eyebrow }}</p>
-              <h2>{{ currentPostMeta.title }}</h2>
-              <span>{{ currentPostMeta.description }}</span>
+          <div class="app-section-head">
+            <div class="app-section-head__main">
+              <p class="app-section-head__eyebrow">{{ currentPostMeta.eyebrow }}</p>
+              <h2 class="app-section-head__title">{{ currentPostMeta.title }}</h2>
+              <p class="app-section-head__desc">{{ currentPostMeta.description }}</p>
             </div>
-            <strong>{{ currentPage.total }}</strong>
+            <strong class="app-section-head__value">{{ currentPage.total }}</strong>
           </div>
+
           <div v-if="activeTab === 'posts'" class="user-center__post-filter">
             <a-radio-group v-model="postStatusFilter" type="button">
               <a-radio value="ALL">全部</a-radio>
@@ -90,43 +133,46 @@
               <a-radio value="HIDDEN">已下架</a-radio>
             </a-radio-group>
           </div>
+
           <div v-if="currentPosts.length" class="user-center__post-list">
             <article v-for="post in currentPosts" :key="post.id" class="user-center__post-item">
               <PostCard :post="post" />
-              <div v-if="activeTab === 'posts'" class="user-center__post-actions">
-                <a-tag :color="post.status === 'HIDDEN' ? 'orange' : 'green'">
-                  {{ post.status === 'HIDDEN' ? '已下架' : '已发布' }}
-                </a-tag>
-                <RouterLink v-if="post.status === 'PUBLISHED'" :to="`/posts/${post.id}/edit`">
-                  <a-button size="small">编辑</a-button>
-                </RouterLink>
-                <a-button size="small" @click="togglePostHidden(post)">
-                  {{ post.status === 'HIDDEN' ? '恢复上架' : '下架' }}
-                </a-button>
-                <a-button size="small" status="danger" @click="removePost(post.id)">删除</a-button>
-              </div>
-              <div v-else class="user-center__post-actions">
-                <RouterLink :to="`/posts/${post.id}`">
-                  <a-button size="small">查看详情</a-button>
-                </RouterLink>
-                <a-button
-                  v-if="activeTab === 'favorites'"
-                  size="small"
-                  status="danger"
-                  :loading="postActionId === post.id"
-                  @click="toggleFavorite(post)"
-                >
-                  取消收藏
-                </a-button>
-                <a-button
-                  v-if="activeTab === 'likes'"
-                  size="small"
-                  status="danger"
-                  :loading="postActionId === post.id"
-                  @click="toggleLike(post)"
-                >
-                  取消点赞
-                </a-button>
+              <div class="user-center__post-actions">
+                <template v-if="activeTab === 'posts'">
+                  <a-tag :color="post.status === 'HIDDEN' ? 'orange' : 'green'">
+                    {{ post.status === 'HIDDEN' ? '已下架' : '已发布' }}
+                  </a-tag>
+                  <RouterLink v-if="post.status === 'PUBLISHED'" :to="`/posts/${post.id}/edit`">
+                    <a-button size="small">编辑</a-button>
+                  </RouterLink>
+                  <a-button size="small" @click="togglePostHidden(post)">
+                    {{ post.status === 'HIDDEN' ? '恢复上架' : '下架' }}
+                  </a-button>
+                  <a-button size="small" status="danger" @click="removePost(post.id)">删除</a-button>
+                </template>
+                <template v-else>
+                  <RouterLink :to="`/posts/${post.id}`">
+                    <a-button size="small">查看详情</a-button>
+                  </RouterLink>
+                  <a-button
+                    v-if="activeTab === 'favorites'"
+                    size="small"
+                    status="danger"
+                    :loading="postActionId === post.id"
+                    @click="toggleFavorite(post)"
+                  >
+                    取消收藏
+                  </a-button>
+                  <a-button
+                    v-if="activeTab === 'likes'"
+                    size="small"
+                    status="danger"
+                    :loading="postActionId === post.id"
+                    @click="toggleLike(post)"
+                  >
+                    取消点赞
+                  </a-button>
+                </template>
               </div>
             </article>
           </div>
@@ -144,49 +190,40 @@
             </div>
           </div>
           <div v-if="currentPage.total > currentPage.size" class="user-center__pager">
-            <a-pagination
-              :current="currentPage.page"
-              :page-size="currentPage.size"
-              :total="currentPage.total"
-              @change="changePostPage"
-            />
+            <a-pagination :current="currentPage.page" :page-size="currentPage.size" :total="currentPage.total" @change="changePostPage" />
           </div>
         </template>
 
         <template v-else>
-          <div class="user-center__section-head">
-            <div>
-              <p>{{ currentUserMeta.eyebrow }}</p>
-              <h2>{{ currentUserMeta.title }}</h2>
-              <span>{{ currentUserMeta.description }}</span>
+          <div class="app-section-head">
+            <div class="app-section-head__main">
+              <p class="app-section-head__eyebrow">{{ currentUserMeta.eyebrow }}</p>
+              <h2 class="app-section-head__title">{{ currentUserMeta.title }}</h2>
+              <p class="app-section-head__desc">{{ currentUserMeta.description }}</p>
             </div>
-            <strong>{{ currentUserPage.total }}</strong>
+            <strong class="app-section-head__value">{{ currentUserPage.total }}</strong>
           </div>
+
           <div v-if="currentUsers.length" class="user-center__user-list">
             <article v-for="user in currentUsers" :key="user.id" class="user-center__user-item">
               <RouterLink :to="`/users/${user.id}`" class="user-center__user-main">
-                <a-avatar :size="42">
+                <a-avatar :size="48">
                   <img v-if="user.avatarUrl" :src="resolveAssetUrl(user.avatarUrl)" alt="" />
                   <template v-else>{{ (user.nickname || user.username).slice(0, 1).toUpperCase() }}</template>
                 </a-avatar>
-                <div>
+                <div class="user-center__user-copy">
                   <h3>{{ user.nickname || user.username }}</h3>
                   <p>@{{ user.username }}</p>
                 </div>
               </RouterLink>
-              <a-tag v-if="user.mutualFollow" color="green">互关</a-tag>
-              <a-tag v-else-if="user.followedByMe" color="arcoblue">已关注</a-tag>
-              <RouterLink v-if="user.mutualFollow" :to="`/chat?userId=${user.id}`">
-                <a-button size="small">发私信</a-button>
-              </RouterLink>
-              <a-button
-                v-else-if="activeTab === 'followers'"
-                size="small"
-                type="primary"
-                @click="followBack(user.id)"
-              >
-                回关
-              </a-button>
+              <div class="user-center__user-actions">
+                <a-tag v-if="user.mutualFollow" color="green">互关</a-tag>
+                <a-tag v-else-if="user.followedByMe" color="arcoblue">已关注</a-tag>
+                <RouterLink v-if="user.mutualFollow" :to="`/chat?userId=${user.id}`">
+                  <a-button size="small">发私信</a-button>
+                </RouterLink>
+                <a-button v-else-if="activeTab === 'followers'" size="small" type="primary" @click="followBack(user.id)">回关</a-button>
+              </div>
             </article>
           </div>
           <div v-else class="app-empty-state">
@@ -200,12 +237,7 @@
             </div>
           </div>
           <div v-if="currentUserPage.total > currentUserPage.size" class="user-center__pager">
-            <a-pagination
-              :current="currentUserPage.page"
-              :page-size="currentUserPage.size"
-              :total="currentUserPage.total"
-              @change="changeUserPage"
-            />
+            <a-pagination :current="currentUserPage.page" :page-size="currentUserPage.size" :total="currentUserPage.total" @change="changeUserPage" />
           </div>
         </template>
       </a-spin>
@@ -218,10 +250,10 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
 import { useRoute, useRouter } from 'vue-router'
 import PostCard from '@/components/post/PostCard.vue'
+import { uploadImageFile } from '@/api/file'
 import { fetchFollowers, fetchFollowing, fetchMutualFollows, followUser } from '@/api/follow'
 import { deletePost, hidePost, unlikePost, unfavoritePost } from '@/api/post'
 import { fetchUserFavorites, fetchUserLikes, fetchUserPosts, fetchUserProfile, updateMyProfile } from '@/api/user'
-import { uploadImageFile } from '@/api/file'
 import { useAuthStore } from '@/stores/auth'
 import type { FollowUser } from '@/types/follow'
 import type { PostListItem } from '@/types/post'
@@ -578,9 +610,7 @@ onMounted(async () => {
   await loadOwnProfile()
   const tab = getInitialTab()
   activeTab.value = tab
-  if (tab === 'profile') {
-    return
-  }
+  if (tab === 'profile') return
   if (['following', 'followers', 'mutual'].includes(tab)) {
     await loadUsers(tab)
     return
@@ -590,128 +620,142 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
-.user-center {
-  display: grid;
-  gap: 20px;
-}
-
 .user-center__hero {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 28px;
-  background:
-    radial-gradient(circle at 0% 0%, rgba(15, 118, 110, 0.22), transparent 40%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.86));
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 22px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.9fr);
+  gap: 24px;
 }
 
 .user-center__hero-main {
   display: grid;
-  gap: 18px;
-  flex: 1;
+  gap: 20px;
 }
 
-.user-center__profile {
+.user-center__identity {
   display: flex;
-  align-items: center;
-  gap: 16px;
+  align-items: flex-start;
+  gap: 18px;
 }
 
 .user-center__avatar {
-  color: #0f766e;
+  flex-shrink: 0;
+  color: var(--app-primary);
   font-weight: 800;
-  background: #ccfbf1;
+  background: linear-gradient(135deg, rgba(204, 251, 241, 0.92), rgba(219, 234, 254, 0.92));
+}
+
+.user-center__identity-copy {
+  display: grid;
+  gap: 8px;
 }
 
 .user-center__eyebrow {
-  margin: 0 0 6px;
-  color: #0f766e;
-  font-weight: 800;
-  letter-spacing: 0;
-}
-
-.user-center__hero h1 {
-  margin: 0 0 8px;
-  color: #172033;
-  font-size: 32px;
-}
-
-.user-center__hero p:last-child {
   margin: 0;
-  color: #64748b;
+  color: var(--app-primary);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.user-center__hero-cards {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  max-width: 720px;
+.user-center__identity-copy h1 {
+  margin: 0;
+  color: var(--app-text-1);
+  font-size: clamp(30px, 5vw, 44px);
+  line-height: 1.08;
 }
 
-.user-center__hero-cards article {
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.76);
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 16px;
+.user-center__identity-copy > p:last-of-type {
+  margin: 0;
+  color: var(--app-text-3);
+  line-height: 1.8;
 }
 
-.user-center__hero-cards strong,
-.user-center__hero-cards span {
-  display: block;
-}
-
-.user-center__hero-cards strong {
-  color: #172033;
-  font-size: 20px;
-}
-
-.user-center__hero-cards span {
-  margin-top: 6px;
-  color: #64748b;
-  font-size: 13px;
-}
-
-.user-center__stats {
+.user-center__identity-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  color: #334155;
+  gap: 8px;
 }
 
-.user-center__stats span {
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 8px;
+.user-center__hero-side {
+  display: grid;
+}
+
+.user-center__quick-card {
+  align-content: start;
+  gap: 14px;
+}
+
+.user-center__quick-card h3,
+.user-center__quick-card p {
+  margin: 0;
+}
+
+.user-center__quick-card h3 {
+  color: var(--app-text-1);
+  font-size: 22px;
+}
+
+.user-center__quick-card p:last-of-type {
+  color: var(--app-text-3);
+}
+
+.user-center__quick-actions {
+  display: grid;
+  gap: 10px;
 }
 
 .user-center__panel {
-  border-radius: 8px;
-  box-shadow: 0 14px 42px rgba(15, 23, 42, 0.06);
+  padding-top: 18px;
+}
+
+.user-center__panel :deep(.arco-card-body) {
+  padding: 0;
 }
 
 .user-center__form {
-  max-width: 680px;
+  display: grid;
+  gap: 18px;
   margin-top: 12px;
 }
 
-.user-center__form-head p,
-.user-center__form-head h2 {
-  margin: 0;
+.user-center__form-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  gap: 18px;
 }
 
-.user-center__form-head p {
-  color: #0f766e;
-  font-weight: 800;
+.user-center__profile-preview {
+  display: grid;
+  gap: 14px;
+  align-content: start;
 }
 
-.user-center__form-head h2 {
-  margin-top: 6px;
-  color: #172033;
-  font-size: 24px;
+.user-center__profile-preview strong,
+.user-center__profile-preview p,
+.user-center__profile-preview span {
+  display: block;
+}
+
+.user-center__profile-preview strong {
+  color: var(--app-text-1);
+  font-size: 18px;
+}
+
+.user-center__profile-preview p {
+  margin: 4px 0 0;
+  color: var(--app-text-3);
+}
+
+.user-center__profile-preview span {
+  margin-top: 8px;
+  color: var(--app-text-3);
+  line-height: 1.75;
+}
+
+.user-center__form-fields {
+  display: grid;
+  gap: 2px;
 }
 
 .user-center__avatar-editor {
@@ -725,13 +769,13 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 96px;
-  height: 32px;
-  color: #0f766e;
+  min-width: 108px;
+  height: 36px;
+  color: var(--app-primary);
   cursor: pointer;
-  background: #ecfdf5;
+  background: rgba(236, 253, 245, 0.95);
   border: 1px solid rgba(15, 118, 110, 0.24);
-  border-radius: 6px;
+  border-radius: 10px;
 }
 
 .user-center__upload input {
@@ -746,57 +790,16 @@ onMounted(async () => {
   justify-content: flex-end;
 }
 
+.user-center__post-filter,
+.user-center__post-list,
+.user-center__user-list {
+  margin-top: 16px;
+}
+
 .user-center__post-list,
 .user-center__user-list {
   display: grid;
   gap: 14px;
-  margin-top: 14px;
-}
-
-.user-center__post-filter {
-  margin-top: 14px;
-}
-
-.user-center__section-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 14px;
-  padding: 18px 20px;
-  background: linear-gradient(135deg, rgba(15, 118, 110, 0.08), rgba(59, 130, 246, 0.06));
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 16px;
-}
-
-.user-center__section-head p,
-.user-center__section-head h2,
-.user-center__section-head span,
-.user-center__section-head strong {
-  margin: 0;
-}
-
-.user-center__section-head p {
-  color: #0f766e;
-  font-weight: 800;
-}
-
-.user-center__section-head h2 {
-  margin-top: 6px;
-  color: #172033;
-  font-size: 24px;
-}
-
-.user-center__section-head span {
-  display: block;
-  margin-top: 8px;
-  color: #64748b;
-}
-
-.user-center__section-head strong {
-  color: #172033;
-  font-size: 30px;
-  line-height: 1;
 }
 
 .user-center__post-item {
@@ -814,12 +817,13 @@ onMounted(async () => {
 .user-center__user-item {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 14px;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px;
   background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 16px;
+  border: 1px solid var(--app-border-color);
+  border-radius: var(--app-radius-md);
+  box-shadow: var(--app-shadow-xs);
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease,
@@ -829,7 +833,7 @@ onMounted(async () => {
 .user-center__user-item:hover {
   transform: translateY(-1px);
   border-color: rgba(15, 118, 110, 0.14);
-  box-shadow: 0 16px 44px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--app-shadow-sm);
 }
 
 .user-center__user-main {
@@ -842,14 +846,30 @@ onMounted(async () => {
   text-decoration: none;
 }
 
-.user-center__user-item h3 {
-  margin: 0 0 2px;
-  color: #172033;
+.user-center__user-copy {
+  min-width: 0;
 }
 
-.user-center__user-item p {
+.user-center__user-copy h3,
+.user-center__user-copy p {
   margin: 0;
-  color: #64748b;
+}
+
+.user-center__user-copy h3 {
+  color: var(--app-text-1);
+  font-size: 16px;
+}
+
+.user-center__user-copy p {
+  margin-top: 4px;
+  color: var(--app-text-3);
+}
+
+.user-center__user-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .user-center__pager {
@@ -858,23 +878,28 @@ onMounted(async () => {
   margin-top: 18px;
 }
 
-@media (max-width: 760px) {
-  .user-center__hero {
-    align-items: flex-start;
+@media (max-width: 1080px) {
+  .user-center__hero,
+  .user-center__form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .user-center__identity,
+  .user-center__user-item {
     flex-direction: column;
+    align-items: flex-start;
   }
 
   .user-center__avatar-editor {
     grid-template-columns: 1fr;
   }
 
-  .user-center__hero-cards {
-    grid-template-columns: 1fr;
-  }
-
-  .user-center__section-head {
-    align-items: flex-start;
-    flex-direction: column;
+  .user-center__actions,
+  .user-center__user-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
 </style>
