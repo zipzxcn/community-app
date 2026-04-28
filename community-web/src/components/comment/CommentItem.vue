@@ -126,15 +126,22 @@ function submitReply() {
 .comment-item {
   display: grid;
   gap: 12px;
+  width: 100%;
+  min-width: 0;
 }
 
 .comment-item__body {
-  display: flex;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: flex-start;
   gap: 12px;
-  padding: 14px 14px 12px;
+  width: 100%;
+  min-width: 0;
+  padding: 16px;
   background: rgba(248, 250, 252, 0.9);
   border: 1px solid rgba(15, 23, 42, 0.06);
   border-radius: 18px;
+  box-shadow: var(--app-shadow-xs);
 }
 
 .comment-item__avatar {
@@ -146,6 +153,7 @@ function submitReply() {
 
 .comment-item__content {
   flex: 1;
+  min-width: 0;
 }
 
 .comment-item__top {
@@ -166,7 +174,7 @@ function submitReply() {
 }
 
 .comment-item p {
-  margin: 8px 0;
+  margin: 10px 0 0;
   color: #334155;
   line-height: 1.7;
 }
@@ -174,7 +182,8 @@ function submitReply() {
 .comment-item__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
+  margin-top: 10px;
 }
 
 .comment-item__reply {
@@ -192,18 +201,21 @@ function submitReply() {
 .comment-item__children {
   display: grid;
   gap: 14px;
-  margin-left: 48px;
-  padding-left: 16px;
+  width: 100%;
+  margin-top: 2px;
+  margin-left: 34px;
+  padding-left: 18px;
   border-left: 2px solid rgba(15, 118, 110, 0.12);
 }
 
 @media (max-width: 720px) {
   .comment-item__body {
-    padding: 12px;
+    grid-template-columns: 32px minmax(0, 1fr);
+    padding: 14px;
   }
 
   .comment-item__children {
-    margin-left: 18px;
+    margin-left: 16px;
     padding-left: 12px;
   }
 }

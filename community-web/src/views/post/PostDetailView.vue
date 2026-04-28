@@ -479,6 +479,13 @@ watch(
   padding: 0;
 }
 
+.post-detail__comments :deep(.arco-card-body),
+.post-detail__comments :deep(.arco-spin),
+.post-detail__comments :deep(.arco-spin-children) {
+  display: block;
+  width: 100%;
+}
+
 .post-detail__topbar,
 .post-detail__topbar-actions,
 .post-detail__meta,
@@ -593,6 +600,19 @@ watch(
 .post-detail__comment-list {
   display: grid;
   gap: 18px;
+}
+
+.post-detail__comment-form {
+  padding: 18px;
+  background: rgba(248, 250, 252, 0.62);
+  border: 1px solid var(--app-border-color-soft);
+  border-radius: var(--app-radius-md);
+}
+
+.post-detail__comment-list {
+  grid-template-columns: 1fr;
+  width: 100%;
+  margin-top: 10px;
 }
 
 .post-detail__comment-head {

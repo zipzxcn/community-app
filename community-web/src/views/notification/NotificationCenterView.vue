@@ -41,19 +41,23 @@
             <h2>按类型、状态和关键词快速整理消息</h2>
           </div>
         </div>
-        <a-radio-group v-model="typeFilter" type="button" @change="handleFilterChange">
-          <a-radio value="ALL">全部</a-radio>
-          <a-radio value="POST_LIKE">点赞</a-radio>
-          <a-radio value="COMMENT">评论</a-radio>
-          <a-radio value="FOLLOW">关注</a-radio>
-          <a-radio value="CHAT">聊天</a-radio>
-          <a-radio value="SYSTEM">系统</a-radio>
-        </a-radio-group>
-        <a-radio-group v-model="readFilter" type="button" @change="handleFilterChange">
-          <a-radio value="ALL">全部状态</a-radio>
-          <a-radio value="UNREAD">未读</a-radio>
-          <a-radio value="READ">已读</a-radio>
-        </a-radio-group>
+        <div class="notification-center__filter-row">
+          <a-radio-group v-model="typeFilter" type="button" @change="handleFilterChange">
+            <a-radio value="ALL">全部</a-radio>
+            <a-radio value="POST_LIKE">点赞</a-radio>
+            <a-radio value="COMMENT">评论</a-radio>
+            <a-radio value="FOLLOW">关注</a-radio>
+            <a-radio value="CHAT">聊天</a-radio>
+            <a-radio value="SYSTEM">系统</a-radio>
+          </a-radio-group>
+        </div>
+        <div class="notification-center__filter-row">
+          <a-radio-group v-model="readFilter" type="button" @change="handleFilterChange">
+            <a-radio value="ALL">全部状态</a-radio>
+            <a-radio value="UNREAD">未读</a-radio>
+            <a-radio value="READ">已读</a-radio>
+          </a-radio-group>
+        </div>
         <div class="notification-center__tools">
           <a-input-search
             v-model="keyword"
@@ -466,10 +470,22 @@ onMounted(async () => {
   border-radius: 20px;
 }
 
+.notification-center__panel :deep(.arco-card-body),
+.notification-center__panel :deep(.arco-spin),
+.notification-center__panel :deep(.arco-spin-children) {
+  display: block;
+  width: 100%;
+}
+
 .notification-center__filters {
   display: grid;
   gap: 14px;
   margin-bottom: 18px;
+  padding: 18px;
+  background: rgba(248, 250, 252, 0.58);
+  border: 1px solid var(--app-border-color-soft);
+  border-radius: var(--app-radius-md);
+  width: 100%;
 }
 
 .notification-center__filter-head p,
@@ -488,22 +504,59 @@ onMounted(async () => {
   font-size: 24px;
 }
 
+.notification-center__filter-row {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0 6px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--app-border-color-soft);
+  border-radius: 14px;
+  scrollbar-width: thin;
+}
+
+.notification-center__filter-row :deep(.arco-radio-group) {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  min-width: max-content;
+}
+
+.notification-center__filter-row :deep(.arco-radio) {
+  flex-shrink: 0;
+}
+
+.notification-center__filter-row :deep(.arco-radio-button-content) {
+  min-height: 36px;
+  padding-inline: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .notification-center__tools {
   display: grid;
-  grid-template-columns: minmax(0, 320px) auto;
+  grid-template-columns: minmax(0, 360px) auto;
   gap: 12px;
   justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.notification-center__tools :deep(.arco-input-wrapper) {
+  background: rgba(255, 255, 255, 0.82);
 }
 
 .notification-center__list {
   display: grid;
   gap: 14px;
+  width: 100%;
 }
 
 .notification-center__item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 14px;
+  width: 100%;
   padding: 18px;
   border-radius: 16px;
   transition:
@@ -523,6 +576,9 @@ onMounted(async () => {
 
 .notification-center__item-main {
   cursor: pointer;
+  min-width: 0;
+  display: grid;
+  gap: 10px;
 }
 
 .notification-center__item-head,
@@ -546,6 +602,10 @@ onMounted(async () => {
 .notification-center__item-title h2 {
   color: #172033;
   font-size: 18px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .notification-center__dot {
@@ -571,6 +631,8 @@ onMounted(async () => {
 .notification-center__item-actions {
   justify-content: flex-end;
   align-self: center;
+  flex-wrap: wrap;
+  min-width: 108px;
 }
 
 .notification-center__pager {
@@ -584,6 +646,14 @@ onMounted(async () => {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .notification-center__filters {
+    padding: 14px;
+  }
+
+  .notification-center__filter-row {
+    padding-inline: 2px;
+  }
+
   .notification-center__hero-stats {
     grid-template-columns: 1fr;
   }
@@ -595,12 +665,40 @@ onMounted(async () => {
     align-items: flex-start;
   }
 
+  .notification-center__tools {
+    justify-content: stretch;
+  }
+
+  .notification-center__tools :deep(.arco-btn) {
+    width: 100%;
+  }
+
   .notification-center__item-actions {
     justify-content: flex-start;
+    min-width: 0;
   }
 
   .notification-center__hero-total {
     text-align: left;
+  }
+}
+
+@media (max-width: 720px) {
+  .notification-center__stats {
+    grid-template-columns: 1fr;
+  }
+
+  .notification-center__item {
+    padding: 16px;
+  }
+
+  .notification-center__item-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .notification-center__item-title h2 {
+    white-space: normal;
   }
 }
 </style>
