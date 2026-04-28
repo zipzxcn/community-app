@@ -1,7 +1,7 @@
 <template>
-  <section class="post-detail">
+  <section class="post-detail app-page">
     <a-spin :loading="loading">
-      <article v-if="post" class="post-detail__article">
+      <article v-if="post" class="post-detail__article app-panel">
         <div class="post-detail__topbar">
           <RouterLink class="post-detail__back" to="/">返回帖子流</RouterLink>
           <div class="post-detail__topbar-actions">
@@ -14,36 +14,52 @@
           <div class="post-detail__hero-main">
             <p class="post-detail__eyebrow">Post Detail</p>
             <h1>{{ post.title }}</h1>
-            <div class="post-detail__meta">
-              <span>{{ post.author?.nickname || post.author?.username || '匿名用户' }}</span>
-              <span>{{ formatDateTime(post.publishedAt) }}</span>
-              <span>浏览 {{ post.viewCount || 0 }}</span>
-              <span>评论 {{ post.commentCount || 0 }}</span>
+
+            <div class="post-detail__author-card">
+              <div class="post-detail__author-main">
+                <a-avatar :size="52" class="post-detail__avatar">
+                  <img v-if="post.author?.avatarUrl" :src="resolveAssetUrl(post.author.avatarUrl)" alt="" />
+                  <template v-else>{{ displayInitial }}</template>
+                </a-avatar>
+                <div>
+                  <strong>{{ post.author?.nickname || post.author?.username || '匿名用户' }}</strong>
+                  <p>@{{ post.author?.username || 'unknown' }}</p>
+                </div>
+              </div>
+              <div class="post-detail__meta">
+                <span class="app-chip">{{ formatDateTime(post.publishedAt) }}</span>
+                <span class="app-chip">浏览 {{ post.viewCount || 0 }}</span>
+                <span class="app-chip">评论 {{ post.commentCount || 0 }}</span>
+              </div>
             </div>
+
             <div v-if="post.tags?.length" class="post-detail__tags">
               <a-tag v-for="tag in post.tags" :key="tag.id" color="green">{{ tag.name }}</a-tag>
             </div>
           </div>
 
           <div class="post-detail__hero-side">
-            <article>
+            <article class="app-stat-card">
               <strong>{{ post.likeCount || 0 }}</strong>
               <span>点赞</span>
+              <small>表达你对内容的认可</small>
             </article>
-            <article>
+            <article class="app-stat-card">
               <strong>{{ post.favoriteCount || 0 }}</strong>
               <span>收藏</span>
+              <small>方便后续再次回看</small>
             </article>
-            <article>
+            <article class="app-stat-card">
               <strong>{{ post.commentCount || 0 }}</strong>
               <span>评论</span>
+              <small>参与这场讨论</small>
             </article>
           </div>
         </div>
 
         <img v-if="post.coverUrl" :src="resolveAssetUrl(post.coverUrl)" alt="" class="post-detail__cover" />
-        <div class="markdown-body post-detail__content" v-html="contentHtml"></div>
-        <div class="post-detail__actions">
+
+        <div class="post-detail__action-bar">
           <a-button :type="post.liked ? 'primary' : 'outline'" :loading="likingPost" @click="togglePostLike">
             {{ post.liked ? '已点赞' : '点赞' }} {{ post.likeCount || 0 }}
           </a-button>
@@ -60,13 +76,23 @@
             <a-button status="danger" @click="removePost">删除帖子</a-button>
           </template>
         </div>
+
+        <div class="markdown-body post-detail__content" v-html="contentHtml"></div>
       </article>
       <a-empty v-else description="帖子不存在或已下架" />
     </a-spin>
 
-    <a-card v-if="post" class="post-detail__comments" :bordered="false">
-      <template #title>评论互动 {{ post.commentCount || 0 }}</template>
-      <a-alert v-if="post.allowComment === 0" type="warning" show-icon>
+    <a-card v-if="post" class="post-detail__comments app-panel" :bordered="false">
+      <div class="app-section-head">
+        <div class="app-section-head__main">
+          <p class="app-section-head__eyebrow">Comments</p>
+          <h2 class="app-section-head__title">评论互动</h2>
+          <p class="app-section-head__desc">继续讨论、回复他人观点，或者为优质评论点赞。</p>
+        </div>
+        <strong class="app-section-head__value">{{ post.commentCount || 0 }}</strong>
+      </div>
+
+      <a-alert v-if="post.allowComment === 0" type="warning" show-icon class="post-detail__comment-alert">
         <template #title>作者已关闭评论区。</template>
       </a-alert>
       <div v-else-if="authStore.isLoggedIn" class="post-detail__comment-form">
@@ -80,7 +106,7 @@
         <a-textarea v-model="commentContent" placeholder="写下你的评论" :auto-size="{ minRows: 3, maxRows: 6 }" />
         <a-button type="primary" :disabled="!commentContent.trim()" :loading="submittingComment" @click="submitComment">发表评论</a-button>
       </div>
-      <a-alert v-else type="info" show-icon>
+      <a-alert v-else type="info" show-icon class="post-detail__comment-alert">
         <template #title>登录后可以发表评论、回复和点赞评论。</template>
       </a-alert>
 
@@ -106,12 +132,7 @@
       </a-spin>
 
       <div v-if="commentPage.total > commentPage.size" class="post-detail__pager">
-        <a-pagination
-          :current="commentPage.page"
-          :page-size="commentPage.size"
-          :total="commentPage.total"
-          @change="changeCommentPage"
-        />
+        <a-pagination :current="commentPage.page" :page-size="commentPage.size" :total="commentPage.total" @change="changeCommentPage" />
       </div>
     </a-card>
   </section>
@@ -157,11 +178,10 @@ const commentPage = reactive({
 const isOwner = computed(() => Boolean(post.value && authStore.userInfo?.id === post.value.author?.id))
 const canReplyComment = computed(() => authStore.isLoggedIn && post.value?.allowComment !== 0)
 const contentHtml = computed(() => renderMarkdown(post.value?.contentMd))
+const displayInitial = computed(() => (post.value?.author?.nickname || post.value?.author?.username || '匿').slice(0, 1).toUpperCase())
 
 function requireLogin() {
-  if (authStore.isLoggedIn) {
-    return true
-  }
+  if (authStore.isLoggedIn) return true
   Modal.confirm({
     title: '需要登录',
     content: '登录后才能继续互动。',
@@ -183,9 +203,7 @@ async function loadPost() {
 }
 
 async function recordBrowseHistory() {
-  if (!authStore.isLoggedIn || !post.value) {
-    return
-  }
+  if (!authStore.isLoggedIn || !post.value) return
   await recordHistory(post.value.id).catch(() => undefined)
 }
 
@@ -380,9 +398,7 @@ async function toggleCommentLike(comment: CommentItemType) {
 
 function canDeleteComment(comment: CommentItemType) {
   const currentUserId = authStore.userInfo?.id
-  if (!currentUserId) {
-    return false
-  }
+  if (!currentUserId) return false
   return currentUserId === comment.user?.id || currentUserId === post.value?.author?.id
 }
 
@@ -409,86 +425,96 @@ watch(
 </script>
 
 <style scoped lang="scss">
-.post-detail {
-  display: grid;
-  gap: 22px;
-}
-
 .post-detail__article,
 .post-detail__comments {
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 20px;
-  box-shadow: 0 18px 60px rgba(15, 23, 42, 0.06);
+  padding-top: 0;
 }
 
-.post-detail__article {
-  padding: 30px;
+.post-detail__article :deep(.arco-card-body),
+.post-detail__comments :deep(.arco-card-body) {
+  padding: 0;
 }
 
 .post-detail__topbar,
 .post-detail__topbar-actions,
-.post-detail__back {
-  display: flex;
-  align-items: center;
-}
-
-.post-detail__topbar {
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.post-detail__topbar-actions {
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.post-detail__back {
-  color: #0f766e;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.post-detail__hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 220px;
-  gap: 20px;
-  margin-top: 18px;
-}
-
-.post-detail__eyebrow {
-  margin: 0 0 10px;
-  color: #0f766e;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.post-detail h1 {
-  margin: 0 0 14px;
-  color: #172033;
-  font-size: clamp(30px, 5vw, 52px);
-  line-height: 1.08;
-}
-
 .post-detail__meta,
 .post-detail__tags,
-.post-detail__actions {
+.post-detail__action-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
 }
 
-.post-detail__meta {
-  color: #64748b;
+.post-detail__topbar {
+  justify-content: space-between;
 }
 
-.post-detail__meta span {
-  padding: 6px 10px;
-  background: rgba(248, 250, 252, 0.9);
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  border-radius: 999px;
+.post-detail__back {
+  color: var(--app-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.post-detail__hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(220px, 0.55fr);
+  gap: 22px;
+  margin-top: 18px;
+}
+
+.post-detail__eyebrow {
+  margin: 0 0 8px;
+  color: var(--app-primary);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.post-detail__hero h1 {
+  margin: 0;
+  color: var(--app-text-1);
+  font-size: clamp(34px, 5vw, 56px);
+  line-height: 1.05;
+}
+
+.post-detail__author-card {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 18px;
+  background: rgba(248, 250, 252, 0.84);
+  border: 1px solid var(--app-border-color);
+  border-radius: var(--app-radius-md);
+}
+
+.post-detail__author-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.post-detail__avatar {
+  flex-shrink: 0;
+  color: var(--app-primary);
+  font-weight: 800;
+  background: linear-gradient(135deg, rgba(204, 251, 241, 0.92), rgba(219, 234, 254, 0.92));
+}
+
+.post-detail__author-main strong,
+.post-detail__author-main p {
+  display: block;
+  margin: 0;
+}
+
+.post-detail__author-main strong {
+  color: var(--app-text-1);
+}
+
+.post-detail__author-main p {
+  margin-top: 4px;
+  color: var(--app-text-3);
 }
 
 .post-detail__hero-side {
@@ -496,56 +522,33 @@ watch(
   gap: 12px;
 }
 
-.post-detail__hero-side article {
-  padding: 16px;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(241, 245, 249, 0.95));
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 16px;
-}
-
-.post-detail__hero-side strong,
-.post-detail__hero-side span {
-  display: block;
-}
-
-.post-detail__hero-side strong {
-  color: #172033;
-  font-size: 24px;
-}
-
-.post-detail__hero-side span {
-  margin-top: 6px;
-  color: #64748b;
-  font-size: 13px;
-}
-
 .post-detail__cover {
   width: 100%;
-  max-height: 360px;
+  max-height: 420px;
   margin: 22px 0;
   object-fit: cover;
-  border-radius: 14px;
+  border-radius: 18px;
+}
+
+.post-detail__action-bar {
+  margin-bottom: 22px;
 }
 
 .post-detail__content {
-  margin-top: 24px;
   color: #273449;
   font-size: 16px;
-  line-height: 1.9;
+  line-height: 1.95;
 }
 
-.post-detail__actions {
-  margin-top: 26px;
+.post-detail__comment-alert,
+.post-detail__comment-form {
+  margin-top: 18px;
 }
 
 .post-detail__comment-form,
 .post-detail__comment-list {
   display: grid;
   gap: 18px;
-}
-
-.post-detail__comment-form {
-  margin-bottom: 22px;
 }
 
 .post-detail__comment-head {
@@ -562,18 +565,18 @@ watch(
 }
 
 .post-detail__comment-head p {
-  color: #0f766e;
+  color: var(--app-primary);
   font-weight: 800;
 }
 
 .post-detail__comment-head h3 {
   margin-top: 6px;
-  color: #172033;
+  color: var(--app-text-1);
   font-size: 22px;
 }
 
 .post-detail__comment-head span {
-  color: #64748b;
+  color: var(--app-text-3);
   font-size: 13px;
 }
 
@@ -591,11 +594,13 @@ watch(
 .markdown-body :deep(h2),
 .markdown-body :deep(h3) {
   margin: 16px 0 10px;
-  color: #172033;
+  color: var(--app-text-1);
 }
 
 .markdown-body :deep(p),
-.markdown-body :deep(ul) {
+.markdown-body :deep(ul),
+.markdown-body :deep(ol),
+.markdown-body :deep(blockquote) {
   margin: 0 0 12px;
 }
 
@@ -613,17 +618,16 @@ watch(
   border-radius: 12px;
 }
 
-@media (max-width: 720px) {
-  .post-detail__article {
-    padding: 22px;
-  }
-
+@media (max-width: 960px) {
   .post-detail__hero {
     grid-template-columns: 1fr;
   }
+}
 
+@media (max-width: 720px) {
+  .post-detail__topbar,
   .post-detail__comment-head,
-  .post-detail__topbar {
+  .post-detail__author-main {
     align-items: flex-start;
     flex-direction: column;
   }

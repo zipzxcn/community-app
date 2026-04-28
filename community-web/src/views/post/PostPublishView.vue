@@ -1,79 +1,142 @@
 <template>
-  <section class="post-publish">
-    <div class="post-publish__header">
-      <div>
-        <p class="post-publish__eyebrow">Compose</p>
+  <section class="post-publish app-page">
+    <div class="post-publish__header app-hero">
+      <div class="post-publish__header-main">
+        <p class="post-publish__eyebrow">Compose Workspace</p>
         <h1>{{ isEditMode ? '编辑帖子' : currentDraftId ? '从草稿继续发布' : '发布新帖子' }}</h1>
-        <p>支持 Markdown 编辑、标签选择、封面上传、多图附件、草稿保存与发布。</p>
+        <p class="post-publish__header-desc">
+          当前工作台支持 Markdown 编辑、标签选择、封面上传、正文附件、草稿保存和实时预览，适合作为一期内容生产主入口。
+        </p>
+
+        <div class="app-stat-grid">
+          <article class="app-stat-card">
+            <strong>{{ form.title.trim().length }}</strong>
+            <span>标题字数</span>
+            <small>建议标题清晰、聚焦主题</small>
+          </article>
+          <article class="app-stat-card">
+            <strong>{{ form.tagIds.length }}</strong>
+            <span>当前标签数</span>
+            <small>最多可选择 5 个标签</small>
+          </article>
+          <article class="app-stat-card">
+            <strong>{{ attachmentFiles.length }}</strong>
+            <span>正文附件数</span>
+            <small>上传后会自动插入正文图片语法</small>
+          </article>
+        </div>
       </div>
-      <div class="post-publish__header-actions">
-        <RouterLink to="/drafts">
-          <a-button>草稿箱</a-button>
-        </RouterLink>
-        <RouterLink v-if="isEditMode && currentPostId" :to="`/posts/${currentPostId}`">
-          <a-button>查看帖子</a-button>
-        </RouterLink>
+
+      <div class="post-publish__header-side">
+        <div class="app-panel post-publish__workspace-card">
+          <p class="post-publish__eyebrow">Workspace Status</p>
+          <h3>当前创作状态</h3>
+          <div class="post-publish__status-list">
+            <span class="app-chip">{{ saveStatus }}</span>
+            <span class="app-chip">{{ form.allowComment ? '允许评论' : '评论关闭' }}</span>
+            <span class="app-chip">{{ isEditMode ? '编辑模式' : currentDraftId ? '草稿续写' : '新建模式' }}</span>
+          </div>
+          <div class="post-publish__header-actions">
+            <RouterLink to="/drafts">
+              <a-button long>草稿箱</a-button>
+            </RouterLink>
+            <RouterLink v-if="isEditMode && currentPostId" :to="`/posts/${currentPostId}`">
+              <a-button long>查看帖子</a-button>
+            </RouterLink>
+          </div>
+        </div>
       </div>
     </div>
 
     <div class="post-publish__grid">
-      <a-card class="post-publish__editor" :bordered="false">
-        <a-form :model="form" layout="vertical">
+      <a-card class="post-publish__editor app-panel" :bordered="false">
+        <div class="app-section-head">
+          <div class="app-section-head__main">
+            <p class="app-section-head__eyebrow">Editor</p>
+            <h2 class="app-section-head__title">内容编辑区</h2>
+            <p class="app-section-head__desc">在这里完成标题、标签、封面、正文和附件管理。</p>
+          </div>
+        </div>
+
+        <a-form :model="form" layout="vertical" class="post-publish__form">
           <a-form-item field="title" label="标题">
             <a-input v-model="form.title" placeholder="写一个清楚的标题" :max-length="120" show-word-limit />
           </a-form-item>
 
-          <a-form-item field="tags" label="标签">
-            <a-select
-              v-model="form.tagIds"
-              multiple
-              allow-search
-              allow-clear
-              placeholder="选择最多 5 个标签"
-              :max-tag-count="4"
-            >
-              <a-option v-for="tag in availableTags" :key="tag.id" :value="tag.id">{{ tag.name }}</a-option>
-            </a-select>
-          </a-form-item>
+          <div class="post-publish__row">
+            <a-form-item field="tags" label="标签" class="post-publish__field">
+              <a-select
+                v-model="form.tagIds"
+                multiple
+                allow-search
+                allow-clear
+                placeholder="选择最多 5 个标签"
+                :max-tag-count="4"
+              >
+                <a-option v-for="tag in availableTags" :key="tag.id" :value="tag.id">{{ tag.name }}</a-option>
+              </a-select>
+            </a-form-item>
 
-          <a-form-item field="coverUrl" label="封面">
-            <div class="post-publish__cover-field">
-              <a-input v-model="form.coverUrl" placeholder="可手填 URL，或直接上传封面图" allow-clear />
-              <label class="post-publish__upload-trigger">
-                <input type="file" accept="image/*" @change="uploadCover" />
-                <span>{{ uploadingCover ? '上传中' : '上传封面' }}</span>
-              </label>
-            </div>
-            <img v-if="form.coverUrl" :src="resolveAssetUrl(form.coverUrl)" alt="" class="post-publish__cover-preview" />
-          </a-form-item>
+            <a-form-item field="allowComment" label="允许评论" class="post-publish__field post-publish__switch-field">
+              <a-switch v-model="form.allowComment" />
+            </a-form-item>
+          </div>
 
-          <a-form-item field="attachments" label="正文图片">
-            <div class="post-publish__attachment-tools">
-              <label class="post-publish__upload-trigger">
-                <input type="file" accept="image/*" multiple @change="uploadAttachments" />
-                <span>{{ uploadingAttachments ? '上传中' : '上传图片' }}</span>
-              </label>
-              <span class="post-publish__hint">上传后会自动插入正文；移除附件时会同步移除自动插入的图片语法。</span>
-            </div>
-            <div v-if="attachmentFiles.length" class="post-publish__attachment-list">
-              <article v-for="file in attachmentFiles" :key="file.id" class="post-publish__attachment-item">
-                <img :src="resolveAssetUrl(file.accessUrl)" alt="" />
+          <div class="post-publish__media-grid">
+            <section class="post-publish__media-card">
+              <div class="post-publish__media-head">
                 <div>
-                  <strong>{{ file.originalName }}</strong>
-                  <p>{{ formatFileSize(file.sizeBytes) }}</p>
+                  <p class="post-publish__eyebrow">Cover</p>
+                  <h3>封面图</h3>
                 </div>
-                <a-button size="mini" status="danger" @click="removeAttachment(file.id)">移除</a-button>
-              </article>
-            </div>
-          </a-form-item>
+              </div>
+              <div class="post-publish__cover-field">
+                <a-input v-model="form.coverUrl" placeholder="可手填 URL，或直接上传封面图" allow-clear />
+                <label class="post-publish__upload-trigger">
+                  <input type="file" accept="image/*" @change="uploadCover" />
+                  <span>{{ uploadingCover ? '上传中' : '上传封面' }}</span>
+                </label>
+              </div>
+              <img v-if="form.coverUrl" :src="resolveAssetUrl(form.coverUrl)" alt="" class="post-publish__cover-preview" />
+              <div v-else class="post-publish__cover-placeholder">封面预览区</div>
+            </section>
+
+            <section class="post-publish__media-card">
+              <div class="post-publish__media-head">
+                <div>
+                  <p class="post-publish__eyebrow">Attachments</p>
+                  <h3>正文图片</h3>
+                </div>
+              </div>
+              <div class="post-publish__attachment-tools">
+                <label class="post-publish__upload-trigger">
+                  <input type="file" accept="image/*" multiple @change="uploadAttachments" />
+                  <span>{{ uploadingAttachments ? '上传中' : '上传图片' }}</span>
+                </label>
+                <span class="post-publish__hint">上传后会自动插入正文；移除附件时会同步移除自动插入的图片语法。</span>
+              </div>
+              <div v-if="attachmentFiles.length" class="post-publish__attachment-list">
+                <article v-for="file in attachmentFiles" :key="file.id" class="post-publish__attachment-item">
+                  <img :src="resolveAssetUrl(file.accessUrl)" alt="" />
+                  <div class="post-publish__attachment-copy">
+                    <strong>{{ file.originalName }}</strong>
+                    <p>{{ formatFileSize(file.sizeBytes) }}</p>
+                  </div>
+                  <a-button size="mini" status="danger" @click="removeAttachment(file.id)">移除</a-button>
+                </article>
+              </div>
+              <div v-else class="post-publish__attachment-empty">当前还没有上传正文图片。</div>
+            </section>
+          </div>
 
           <a-form-item field="contentMd" label="正文 Markdown">
-            <div class="post-publish__toolbar">
+            <div class="post-publish__toolbar app-toolbar">
               <a-button size="small" @click="wrapSelection('**', '**')">加粗</a-button>
               <a-button size="small" @click="wrapSelection('*', '*')">斜体</a-button>
               <a-button size="small" @click="wrapSelection('## ', '')">标题</a-button>
               <a-button size="small" @click="wrapSelection('- ', '')">列表</a-button>
               <a-button size="small" @click="wrapSelection('`', '`')">代码</a-button>
+              <a-button size="small" @click="wrapSelection('> ', '')">引用</a-button>
             </div>
             <a-textarea
               ref="editorRef"
@@ -82,29 +145,37 @@
               :auto-size="{ minRows: 18, maxRows: 30 }"
             />
           </a-form-item>
-
-          <a-form-item field="allowComment" label="允许评论">
-            <a-switch v-model="form.allowComment" />
-          </a-form-item>
         </a-form>
 
         <div class="post-publish__actions">
-          <span>{{ saveStatus }}</span>
-          <a-button v-if="!isEditMode" :loading="saving" @click="saveDraftManually">保存草稿</a-button>
-          <a-button type="primary" :loading="publishing" @click="submitPost">
-            {{ isEditMode ? '保存修改' : '发布帖子' }}
-          </a-button>
+          <span class="post-publish__save-text">{{ saveStatus }}</span>
+          <div class="post-publish__action-buttons">
+            <a-button v-if="!isEditMode" :loading="saving" @click="saveDraftManually">保存草稿</a-button>
+            <a-button type="primary" :loading="publishing" @click="submitPost">
+              {{ isEditMode ? '保存修改' : '发布帖子' }}
+            </a-button>
+          </div>
         </div>
       </a-card>
 
-      <a-card class="post-publish__preview" :bordered="false">
-        <template #title>预览</template>
-        <img v-if="form.coverUrl" :src="resolveAssetUrl(form.coverUrl)" alt="" class="post-publish__cover" />
-        <h2>{{ form.title || '未命名帖子' }}</h2>
-        <div v-if="previewTags.length" class="post-publish__preview-tags">
-          <a-tag v-for="tag in previewTags" :key="tag.id" color="green">{{ tag.name }}</a-tag>
+      <a-card class="post-publish__preview app-panel" :bordered="false">
+        <div class="app-section-head">
+          <div class="app-section-head__main">
+            <p class="app-section-head__eyebrow">Preview</p>
+            <h2 class="app-section-head__title">实时预览</h2>
+            <p class="app-section-head__desc">在发布前预览封面、标签和正文排版效果。</p>
+          </div>
         </div>
-        <div class="markdown-body" v-html="previewHtml"></div>
+
+        <div class="post-publish__preview-body">
+          <img v-if="form.coverUrl" :src="resolveAssetUrl(form.coverUrl)" alt="" class="post-publish__cover" />
+          <div v-else class="post-publish__cover post-publish__cover--placeholder">封面预览</div>
+          <h2>{{ form.title || '未命名帖子' }}</h2>
+          <div v-if="previewTags.length" class="post-publish__preview-tags">
+            <a-tag v-for="tag in previewTags" :key="tag.id" color="green">{{ tag.name }}</a-tag>
+          </div>
+          <div class="markdown-body post-publish__preview-content" v-html="previewHtml"></div>
+        </div>
       </a-card>
     </div>
   </section>
@@ -230,9 +301,7 @@ async function loadPost(postId: number) {
 }
 
 async function saveDraft(autoSave = false) {
-  if (loading.value || isEditMode.value || !validateForDraft()) {
-    return
-  }
+  if (loading.value || isEditMode.value || !validateForDraft()) return
   saving.value = true
   try {
     const payload = {
@@ -250,14 +319,10 @@ async function saveDraft(autoSave = false) {
       currentDraftId.value = result.draftId
     }
     saveStatus.value = autoSave ? '已自动保存草稿' : '草稿已保存'
-    if (!autoSave) {
-      Message.success('草稿已保存')
-    }
+    if (!autoSave) Message.success('草稿已保存')
   } catch (error) {
     saveStatus.value = '草稿保存失败'
-    if (!autoSave) {
-      Message.error(error instanceof Error ? error.message : '草稿保存失败')
-    }
+    if (!autoSave) Message.error(error instanceof Error ? error.message : '草稿保存失败')
   } finally {
     saving.value = false
   }
@@ -344,9 +409,7 @@ function wrapSelection(prefix: string, suffix: string) {
 }
 
 async function submitPost() {
-  if (!validateForPublish()) {
-    return
-  }
+  if (!validateForPublish()) return
   publishing.value = true
   try {
     if (isEditMode.value && currentPostId.value) {
@@ -355,7 +418,6 @@ async function submitPost() {
       await router.push(`/posts/${currentPostId.value}`)
       return
     }
-
     const result = await createPost(buildPostPayload())
     if (currentDraftId.value) {
       await deleteDraft(currentDraftId.value).catch(() => undefined)
@@ -370,9 +432,7 @@ async function submitPost() {
 }
 
 function scheduleAutoSave() {
-  if (isEditMode.value) {
-    return
-  }
+  if (isEditMode.value) return
   window.clearTimeout(autosaveTimer)
   if (!validateForDraft()) {
     saveStatus.value = '填写标题后自动保存草稿'
@@ -418,58 +478,120 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="scss">
-.post-publish {
-  display: grid;
-  gap: 22px;
-}
-
 .post-publish__header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 28px;
-  background:
-    linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(245, 158, 11, 0.16)),
-    rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.85fr);
+  gap: 24px;
 }
 
-.post-publish__header-actions {
-  display: flex;
-  gap: 10px;
+.post-publish__header-main {
+  display: grid;
+  gap: 18px;
 }
 
 .post-publish__eyebrow {
-  margin: 0 0 8px;
-  color: #0f766e;
+  margin: 0;
+  color: var(--app-primary);
+  font-size: 12px;
   font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .post-publish__header h1 {
-  margin: 0 0 10px;
-  color: #172033;
-  font-size: clamp(30px, 5vw, 44px);
+  margin: 0;
+  color: var(--app-text-1);
+  font-size: clamp(32px, 5vw, 48px);
+  line-height: 1.08;
 }
 
-.post-publish__header p:last-child {
-  max-width: 680px;
+.post-publish__header-desc {
+  max-width: 720px;
   margin: 0;
-  color: #64748b;
-  line-height: 1.7;
+  color: var(--app-text-3);
+  line-height: 1.85;
+}
+
+.post-publish__workspace-card {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.post-publish__workspace-card h3 {
+  margin: 0;
+  color: var(--app-text-1);
+  font-size: 22px;
+}
+
+.post-publish__status-list,
+.post-publish__header-actions {
+  display: grid;
+  gap: 10px;
 }
 
 .post-publish__grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
   gap: 18px;
+  align-items: start;
 }
 
 .post-publish__editor,
 .post-publish__preview {
-  border-radius: 8px;
-  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.06);
+  padding-top: 0;
+}
+
+.post-publish__editor :deep(.arco-card-body),
+.post-publish__preview :deep(.arco-card-body) {
+  padding: 0;
+}
+
+.post-publish__form {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.post-publish__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  gap: 12px;
+}
+
+.post-publish__field {
+  min-width: 0;
+}
+
+.post-publish__switch-field {
+  align-self: end;
+}
+
+.post-publish__media-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 4px 0 8px;
+}
+
+.post-publish__media-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(248, 250, 252, 0.86);
+  border: 1px solid var(--app-border-color);
+  border-radius: var(--app-radius-md);
+}
+
+.post-publish__media-head h3,
+.post-publish__media-head p {
+  margin: 0;
+}
+
+.post-publish__media-head h3 {
+  margin-top: 6px;
+  color: var(--app-text-1);
+  font-size: 18px;
 }
 
 .post-publish__cover-field,
@@ -486,12 +608,12 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   min-width: 96px;
-  height: 32px;
-  color: #0f766e;
+  height: 36px;
+  color: var(--app-primary);
   cursor: pointer;
-  background: #ecfdf5;
+  background: rgba(236, 253, 245, 0.95);
   border: 1px solid rgba(15, 118, 110, 0.24);
-  border-radius: 6px;
+  border-radius: 10px;
 }
 
 .post-publish__upload-trigger input {
@@ -504,16 +626,25 @@ onBeforeUnmount(() => {
 .post-publish__cover-preview,
 .post-publish__cover {
   width: 100%;
-  max-height: 220px;
-  margin-top: 10px;
+  min-height: 220px;
+  max-height: 280px;
   object-fit: cover;
-  border-radius: 12px;
+  border-radius: 14px;
+}
+
+.post-publish__cover-placeholder,
+.post-publish__cover--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-text-4);
+  background: linear-gradient(135deg, rgba(236, 253, 245, 0.9), rgba(219, 234, 254, 0.9));
+  border: 1px dashed var(--app-border-color-strong);
 }
 
 .post-publish__attachment-list {
   display: grid;
   gap: 10px;
-  margin-top: 12px;
 }
 
 .post-publish__attachment-item {
@@ -522,9 +653,9 @@ onBeforeUnmount(() => {
   gap: 12px;
   align-items: center;
   padding: 10px;
-  background: #f8fafc;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--app-border-color-soft);
+  border-radius: 10px;
 }
 
 .post-publish__attachment-item img {
@@ -534,36 +665,56 @@ onBeforeUnmount(() => {
   border-radius: 8px;
 }
 
-.post-publish__attachment-item strong,
-.post-publish__attachment-item p {
+.post-publish__attachment-copy strong,
+.post-publish__attachment-copy p {
   display: block;
   margin: 0;
 }
 
-.post-publish__attachment-item p,
-.post-publish__hint {
-  color: #64748b;
+.post-publish__attachment-copy p,
+.post-publish__hint,
+.post-publish__attachment-empty {
+  color: var(--app-text-3);
   font-size: 13px;
+  line-height: 1.7;
 }
 
 .post-publish__toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
   margin-bottom: 10px;
 }
 
 .post-publish__actions {
   display: flex;
-  gap: 12px;
   align-items: center;
-  justify-content: flex-end;
-  color: #64748b;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.post-publish__save-text {
+  color: var(--app-text-3);
+  font-size: 13px;
+}
+
+.post-publish__action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.post-publish__preview {
+  position: sticky;
+  top: 120px;
+}
+
+.post-publish__preview-body {
+  margin-top: 18px;
 }
 
 .post-publish__preview h2 {
   margin: 16px 0 12px;
-  color: #172033;
+  color: var(--app-text-1);
+  font-size: 28px;
 }
 
 .post-publish__preview-tags {
@@ -573,9 +724,10 @@ onBeforeUnmount(() => {
   margin-bottom: 14px;
 }
 
+.post-publish__preview-content,
 .markdown-body {
   color: #273449;
-  line-height: 1.8;
+  line-height: 1.85;
   word-break: break-word;
 }
 
@@ -583,11 +735,13 @@ onBeforeUnmount(() => {
 .markdown-body :deep(h2),
 .markdown-body :deep(h3) {
   margin: 16px 0 10px;
-  color: #172033;
+  color: var(--app-text-1);
 }
 
 .markdown-body :deep(p),
-.markdown-body :deep(ul) {
+.markdown-body :deep(ul),
+.markdown-body :deep(ol),
+.markdown-body :deep(blockquote) {
   margin: 0 0 12px;
 }
 
@@ -605,17 +759,34 @@ onBeforeUnmount(() => {
   border-radius: 12px;
 }
 
-@media (max-width: 960px) {
-  .post-publish__header {
-    align-items: flex-start;
-    flex-direction: column;
+@media (max-width: 1100px) {
+  .post-publish__header,
+  .post-publish__grid,
+  .post-publish__media-grid {
+    grid-template-columns: 1fr;
   }
 
-  .post-publish__grid,
+  .post-publish__preview {
+    position: static;
+    top: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .post-publish__row,
   .post-publish__cover-field,
   .post-publish__attachment-tools,
-  .post-publish__attachment-item {
+  .post-publish__attachment-item,
+  .post-publish__actions {
     grid-template-columns: 1fr;
+  }
+
+  .post-publish__actions {
+    display: grid;
+  }
+
+  .post-publish__action-buttons {
+    justify-content: flex-start;
   }
 }
 </style>
