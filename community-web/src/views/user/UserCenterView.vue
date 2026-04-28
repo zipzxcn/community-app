@@ -71,8 +71,8 @@
       </a-tabs>
 
       <a-spin :loading="loading">
-        <a-form v-if="activeTab === 'profile'" :model="profileForm" layout="vertical" class="user-center__form">
-          <div class="app-section-head">
+        <a-form v-if="activeTab === 'profile'" :model="profileForm" layout="vertical" class="user-center__form user-center__tab-content">
+          <div class="app-section-head user-center__section-head">
             <div class="app-section-head__main">
               <p class="app-section-head__eyebrow">Profile Settings</p>
               <h2 class="app-section-head__title">维护你的昵称、头像和个人简介</h2>
@@ -117,127 +117,131 @@
         </a-form>
 
         <template v-else-if="isPostTab">
-          <div class="app-section-head">
-            <div class="app-section-head__main">
-              <p class="app-section-head__eyebrow">{{ currentPostMeta.eyebrow }}</p>
-              <h2 class="app-section-head__title">{{ currentPostMeta.title }}</h2>
-              <p class="app-section-head__desc">{{ currentPostMeta.description }}</p>
-            </div>
-            <strong class="app-section-head__value">{{ currentPage.total }}</strong>
-          </div>
-
-          <div v-if="activeTab === 'posts'" class="user-center__post-filter">
-            <a-radio-group v-model="postStatusFilter" type="button">
-              <a-radio value="ALL">全部</a-radio>
-              <a-radio value="PUBLISHED">已发布</a-radio>
-              <a-radio value="HIDDEN">已下架</a-radio>
-            </a-radio-group>
-          </div>
-
-          <div v-if="currentPosts.length" class="user-center__post-list">
-            <article v-for="post in currentPosts" :key="post.id" class="user-center__post-item">
-              <PostCard :post="post" />
-              <div class="user-center__post-actions">
-                <template v-if="activeTab === 'posts'">
-                  <a-tag :color="post.status === 'HIDDEN' ? 'orange' : 'green'">
-                    {{ post.status === 'HIDDEN' ? '已下架' : '已发布' }}
-                  </a-tag>
-                  <RouterLink v-if="post.status === 'PUBLISHED'" :to="`/posts/${post.id}/edit`">
-                    <a-button size="small">编辑</a-button>
-                  </RouterLink>
-                  <a-button size="small" @click="togglePostHidden(post)">
-                    {{ post.status === 'HIDDEN' ? '恢复上架' : '下架' }}
-                  </a-button>
-                  <a-button size="small" status="danger" @click="removePost(post.id)">删除</a-button>
-                </template>
-                <template v-else>
-                  <RouterLink :to="`/posts/${post.id}`">
-                    <a-button size="small">查看详情</a-button>
-                  </RouterLink>
-                  <a-button
-                    v-if="activeTab === 'favorites'"
-                    size="small"
-                    status="danger"
-                    :loading="postActionId === post.id"
-                    @click="toggleFavorite(post)"
-                  >
-                    取消收藏
-                  </a-button>
-                  <a-button
-                    v-if="activeTab === 'likes'"
-                    size="small"
-                    status="danger"
-                    :loading="postActionId === post.id"
-                    @click="toggleLike(post)"
-                  >
-                    取消点赞
-                  </a-button>
-                </template>
+          <div class="user-center__tab-content">
+            <div class="app-section-head user-center__section-head">
+              <div class="app-section-head__main">
+                <p class="app-section-head__eyebrow">{{ currentPostMeta.eyebrow }}</p>
+                <h2 class="app-section-head__title">{{ currentPostMeta.title }}</h2>
+                <p class="app-section-head__desc">{{ currentPostMeta.description }}</p>
               </div>
-            </article>
-          </div>
-          <div v-else class="app-empty-state">
-            <p class="app-empty-state__eyebrow">{{ currentPostMeta.eyebrow }}</p>
-            <h3 class="app-empty-state__title">{{ currentPostMeta.title }}</h3>
-            <p class="app-empty-state__desc">{{ currentPostMeta.emptyText }}</p>
-            <div class="app-empty-state__actions">
-              <RouterLink v-if="activeTab === 'posts'" to="/posts/publish">
-                <a-button type="primary">去发布</a-button>
-              </RouterLink>
-              <RouterLink v-else to="/">
-                <a-button>回到首页</a-button>
-              </RouterLink>
+              <strong class="app-section-head__value">{{ currentPage.total }}</strong>
             </div>
-          </div>
-          <div v-if="currentPage.total > currentPage.size" class="user-center__pager">
-            <a-pagination :current="currentPage.page" :page-size="currentPage.size" :total="currentPage.total" @change="changePostPage" />
+
+            <div v-if="activeTab === 'posts'" class="user-center__post-filter">
+              <a-radio-group v-model="postStatusFilter" type="button">
+                <a-radio value="ALL">全部</a-radio>
+                <a-radio value="PUBLISHED">已发布</a-radio>
+                <a-radio value="HIDDEN">已下架</a-radio>
+              </a-radio-group>
+            </div>
+
+            <div v-if="currentPosts.length" class="user-center__post-list">
+              <article v-for="post in currentPosts" :key="post.id" class="user-center__post-item">
+                <PostCard :post="post" />
+                <div class="user-center__post-actions">
+                  <template v-if="activeTab === 'posts'">
+                    <a-tag :color="post.status === 'HIDDEN' ? 'orange' : 'green'">
+                      {{ post.status === 'HIDDEN' ? '已下架' : '已发布' }}
+                    </a-tag>
+                    <RouterLink v-if="post.status === 'PUBLISHED'" :to="`/posts/${post.id}/edit`">
+                      <a-button size="small">编辑</a-button>
+                    </RouterLink>
+                    <a-button size="small" @click="togglePostHidden(post)">
+                      {{ post.status === 'HIDDEN' ? '恢复上架' : '下架' }}
+                    </a-button>
+                    <a-button size="small" status="danger" @click="removePost(post.id)">删除</a-button>
+                  </template>
+                  <template v-else>
+                    <RouterLink :to="`/posts/${post.id}`">
+                      <a-button size="small">查看详情</a-button>
+                    </RouterLink>
+                    <a-button
+                      v-if="activeTab === 'favorites'"
+                      size="small"
+                      status="danger"
+                      :loading="postActionId === post.id"
+                      @click="toggleFavorite(post)"
+                    >
+                      取消收藏
+                    </a-button>
+                    <a-button
+                      v-if="activeTab === 'likes'"
+                      size="small"
+                      status="danger"
+                      :loading="postActionId === post.id"
+                      @click="toggleLike(post)"
+                    >
+                      取消点赞
+                    </a-button>
+                  </template>
+                </div>
+              </article>
+            </div>
+            <div v-else class="app-empty-state">
+              <p class="app-empty-state__eyebrow">{{ currentPostMeta.eyebrow }}</p>
+              <h3 class="app-empty-state__title">{{ currentPostMeta.title }}</h3>
+              <p class="app-empty-state__desc">{{ currentPostMeta.emptyText }}</p>
+              <div class="app-empty-state__actions">
+                <RouterLink v-if="activeTab === 'posts'" to="/posts/publish">
+                  <a-button type="primary">去发布</a-button>
+                </RouterLink>
+                <RouterLink v-else to="/">
+                  <a-button>回到首页</a-button>
+                </RouterLink>
+              </div>
+            </div>
+            <div v-if="currentPage.total > currentPage.size" class="user-center__pager">
+              <a-pagination :current="currentPage.page" :page-size="currentPage.size" :total="currentPage.total" @change="changePostPage" />
+            </div>
           </div>
         </template>
 
         <template v-else>
-          <div class="app-section-head">
-            <div class="app-section-head__main">
-              <p class="app-section-head__eyebrow">{{ currentUserMeta.eyebrow }}</p>
-              <h2 class="app-section-head__title">{{ currentUserMeta.title }}</h2>
-              <p class="app-section-head__desc">{{ currentUserMeta.description }}</p>
-            </div>
-            <strong class="app-section-head__value">{{ currentUserPage.total }}</strong>
-          </div>
-
-          <div v-if="currentUsers.length" class="user-center__user-list">
-            <article v-for="user in currentUsers" :key="user.id" class="user-center__user-item">
-              <RouterLink :to="`/users/${user.id}`" class="user-center__user-main">
-                <a-avatar :size="48">
-                  <img v-if="user.avatarUrl" :src="resolveAssetUrl(user.avatarUrl)" alt="" />
-                  <template v-else>{{ (user.nickname || user.username).slice(0, 1).toUpperCase() }}</template>
-                </a-avatar>
-                <div class="user-center__user-copy">
-                  <h3>{{ user.nickname || user.username }}</h3>
-                  <p>@{{ user.username }}</p>
-                </div>
-              </RouterLink>
-              <div class="user-center__user-actions">
-                <a-tag v-if="user.mutualFollow" color="green">互关</a-tag>
-                <a-tag v-else-if="user.followedByMe" color="arcoblue">已关注</a-tag>
-                <RouterLink v-if="user.mutualFollow" :to="`/chat?userId=${user.id}`">
-                  <a-button size="small">发私信</a-button>
-                </RouterLink>
-                <a-button v-else-if="activeTab === 'followers'" size="small" type="primary" @click="followBack(user.id)">回关</a-button>
+          <div class="user-center__tab-content">
+            <div class="app-section-head user-center__section-head">
+              <div class="app-section-head__main">
+                <p class="app-section-head__eyebrow">{{ currentUserMeta.eyebrow }}</p>
+                <h2 class="app-section-head__title">{{ currentUserMeta.title }}</h2>
+                <p class="app-section-head__desc">{{ currentUserMeta.description }}</p>
               </div>
-            </article>
-          </div>
-          <div v-else class="app-empty-state">
-            <p class="app-empty-state__eyebrow">{{ currentUserMeta.eyebrow }}</p>
-            <h3 class="app-empty-state__title">{{ currentUserMeta.title }}</h3>
-            <p class="app-empty-state__desc">{{ emptyUserText }}</p>
-            <div class="app-empty-state__actions">
-              <RouterLink to="/users/search">
-                <a-button type="primary">去找人</a-button>
-              </RouterLink>
+              <strong class="app-section-head__value">{{ currentUserPage.total }}</strong>
             </div>
-          </div>
-          <div v-if="currentUserPage.total > currentUserPage.size" class="user-center__pager">
-            <a-pagination :current="currentUserPage.page" :page-size="currentUserPage.size" :total="currentUserPage.total" @change="changeUserPage" />
+
+            <div v-if="currentUsers.length" class="user-center__user-list">
+              <article v-for="user in currentUsers" :key="user.id" class="user-center__user-item">
+                <RouterLink :to="`/users/${user.id}`" class="user-center__user-main">
+                  <a-avatar :size="48">
+                    <img v-if="user.avatarUrl" :src="resolveAssetUrl(user.avatarUrl)" alt="" />
+                    <template v-else>{{ (user.nickname || user.username).slice(0, 1).toUpperCase() }}</template>
+                  </a-avatar>
+                  <div class="user-center__user-copy">
+                    <h3>{{ user.nickname || user.username }}</h3>
+                    <p>@{{ user.username }}</p>
+                  </div>
+                </RouterLink>
+                <div class="user-center__user-actions">
+                  <a-tag v-if="user.mutualFollow" color="green">互关</a-tag>
+                  <a-tag v-else-if="user.followedByMe" color="arcoblue">已关注</a-tag>
+                  <RouterLink v-if="user.mutualFollow" :to="`/chat?userId=${user.id}`">
+                    <a-button size="small">发私信</a-button>
+                  </RouterLink>
+                  <a-button v-else-if="activeTab === 'followers'" size="small" type="primary" @click="followBack(user.id)">回关</a-button>
+                </div>
+              </article>
+            </div>
+            <div v-else class="app-empty-state">
+              <p class="app-empty-state__eyebrow">{{ currentUserMeta.eyebrow }}</p>
+              <h3 class="app-empty-state__title">{{ currentUserMeta.title }}</h3>
+              <p class="app-empty-state__desc">{{ emptyUserText }}</p>
+              <div class="app-empty-state__actions">
+                <RouterLink to="/users/search">
+                  <a-button type="primary">去找人</a-button>
+                </RouterLink>
+              </div>
+            </div>
+            <div v-if="currentUserPage.total > currentUserPage.size" class="user-center__pager">
+              <a-pagination :current="currentUserPage.page" :page-size="currentUserPage.size" :total="currentUserPage.total" @change="changeUserPage" />
+            </div>
           </div>
         </template>
       </a-spin>
@@ -732,6 +736,12 @@ onMounted(async () => {
   overflow: hidden;
 }
 
+.user-center__panel :deep(.arco-spin),
+.user-center__panel :deep(.arco-spin-children) {
+  display: block;
+  width: 100%;
+}
+
 .user-center__panel :deep(.arco-tabs) {
   min-width: 0;
 }
@@ -767,6 +777,19 @@ onMounted(async () => {
   display: grid;
   gap: 18px;
   margin-top: 12px;
+}
+
+.user-center__tab-content {
+  display: grid;
+  gap: 18px;
+  width: 100%;
+  min-width: 0;
+  margin-top: 12px;
+}
+
+.user-center__section-head {
+  width: 100%;
+  max-width: 100%;
 }
 
 .user-center__form-grid {
@@ -855,6 +878,7 @@ onMounted(async () => {
 .user-center__user-list {
   display: grid;
   gap: 14px;
+  grid-template-columns: 1fr;
 }
 
 .user-center__post-item {
@@ -871,10 +895,11 @@ onMounted(async () => {
 }
 
 .user-center__user-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 14px;
+  width: 100%;
   padding: 16px;
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid var(--app-border-color);
@@ -926,6 +951,7 @@ onMounted(async () => {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
+  align-items: center;
 }
 
 .user-center__pager {
@@ -942,9 +968,13 @@ onMounted(async () => {
 }
 
 @media (max-width: 720px) {
-  .user-center__identity,
-  .user-center__user-item {
+  .user-center__identity {
     flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .user-center__user-item {
+    grid-template-columns: 1fr;
     align-items: flex-start;
   }
 
