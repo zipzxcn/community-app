@@ -18,7 +18,7 @@ public class MinioClientConfig {
      * 初始化 MinioClient，并在启动时校验关键配置项。
      */
     @Bean
-    @ConditionalOnProperty(prefix = "app.storage", name = "provider", harvingValue = "minio")
+    @ConditionalOnProperty(prefix = "app.storage", name = "provider", havingValue = "minio")
     public MinioClient minioClient(StorageProperties storageProperties) {
         if (!StringUtils.hasText(storageProperties.getEndpoint())
                 || !StringUtils.hasText(storageProperties.getAccessKey())
