@@ -620,10 +620,18 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
+.user-center {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 .user-center__hero {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.9fr);
   gap: 24px;
+  width: 100%;
+  max-width: 100%;
 }
 
 .user-center__hero-main {
@@ -689,6 +697,7 @@ onMounted(async () => {
 .user-center__quick-card {
   align-content: start;
   gap: 14px;
+  min-width: 0;
 }
 
 .user-center__quick-card h3,
@@ -712,6 +721,9 @@ onMounted(async () => {
 
 .user-center__panel {
   padding-top: 18px;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .user-center__panel :deep(.arco-card-body) {
@@ -725,6 +737,8 @@ onMounted(async () => {
 }
 
 .user-center__panel :deep(.arco-tabs-nav) {
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   padding-bottom: 6px;
@@ -733,11 +747,20 @@ onMounted(async () => {
 
 .user-center__panel :deep(.arco-tabs-nav-tab-list) {
   flex-wrap: nowrap;
-  width: max-content;
+  width: auto;
+  min-width: max-content;
 }
 
 .user-center__panel :deep(.arco-tabs-content) {
   min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.user-center__panel :deep(.arco-tabs-content-list),
+.user-center__panel :deep(.arco-tabs-content-item) {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .user-center__form {
@@ -750,12 +773,14 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
   gap: 18px;
+  min-width: 0;
 }
 
 .user-center__profile-preview {
   display: grid;
   gap: 14px;
   align-content: start;
+  min-width: 0;
 }
 
 .user-center__profile-preview strong,
@@ -783,12 +808,14 @@ onMounted(async () => {
 .user-center__form-fields {
   display: grid;
   gap: 2px;
+  min-width: 0;
 }
 
 .user-center__avatar-editor {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 10px;
+  min-width: 0;
 }
 
 .user-center__upload {
@@ -821,6 +848,7 @@ onMounted(async () => {
 .user-center__post-list,
 .user-center__user-list {
   margin-top: 16px;
+  min-width: 0;
 }
 
 .user-center__post-list,
@@ -930,6 +958,30 @@ onMounted(async () => {
 
   .user-center__avatar-editor {
     grid-template-columns: 1fr;
+  }
+
+  .user-center__panel :deep(.arco-tabs-nav) {
+    margin-inline: -4px;
+    padding-inline: 4px;
+  }
+
+  .user-center__panel :deep(.arco-tabs-tab) {
+    white-space: nowrap;
+  }
+
+  .user-center__post-filter :deep(.arco-radio-group) {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+  }
+
+  .user-center__post-filter :deep(.arco-radio) {
+    flex-shrink: 0;
   }
 
   .user-center__actions,
