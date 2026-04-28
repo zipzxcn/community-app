@@ -1,6 +1,6 @@
 <template>
   <section class="post-detail app-page">
-    <a-spin :loading="loading">
+    <a-spin :loading="false">
       <article v-if="post" class="post-detail__article app-panel">
         <div class="post-detail__topbar">
           <RouterLink class="post-detail__back" to="/">返回帖子流</RouterLink>
@@ -79,7 +79,27 @@
 
         <div class="markdown-body post-detail__content" v-html="contentHtml"></div>
       </article>
-      <a-empty v-else description="帖子不存在或已下架" />
+      <div v-else-if="loading" class="app-loading-list">
+        <div class="app-loading-card post-detail__skeleton-card">
+          <div class="app-skeleton app-skeleton--text-short"></div>
+          <div class="app-skeleton app-skeleton--title"></div>
+          <div class="app-skeleton app-skeleton--text"></div>
+          <div class="app-skeleton app-skeleton--text"></div>
+          <div class="app-skeleton post-detail__skeleton-cover"></div>
+          <div class="app-skeleton app-skeleton--text"></div>
+          <div class="app-skeleton app-skeleton--text-short"></div>
+        </div>
+      </div>
+      <div v-else class="app-empty-state app-empty-state--center">
+        <p class="app-empty-state__eyebrow">Post Detail</p>
+        <h3 class="app-empty-state__title">帖子不存在或暂时不可见</h3>
+        <p class="app-empty-state__desc">这篇内容可能已删除、下架，或者你当前没有查看权限。你可以返回首页继续浏览其他帖子。</p>
+        <div class="app-empty-state__actions">
+          <RouterLink to="/">
+            <a-button type="primary">返回首页</a-button>
+          </RouterLink>
+        </div>
+      </div>
     </a-spin>
 
     <a-card v-if="post" class="post-detail__comments app-panel" :bordered="false">
@@ -103,15 +123,27 @@
           </div>
           <span>{{ commentContent.trim().length }}/1000</span>
         </div>
-        <a-textarea v-model="commentContent" placeholder="写下你的评论" :auto-size="{ minRows: 3, maxRows: 6 }" />
+        <a-textarea
+          ref="commentInputRef"
+          v-model="commentContent"
+          placeholder="写下你的评论"
+          :auto-size="{ minRows: 3, maxRows: 6 }"
+        />
         <a-button type="primary" :disabled="!commentContent.trim()" :loading="submittingComment" @click="submitComment">发表评论</a-button>
       </div>
       <a-alert v-else type="info" show-icon class="post-detail__comment-alert">
         <template #title>登录后可以发表评论、回复和点赞评论。</template>
       </a-alert>
 
-      <a-spin :loading="commentsLoading">
-        <div v-if="comments.length" class="post-detail__comment-list">
+      <a-spin :loading="false">
+        <div v-if="commentsLoading && !comments.length" class="app-loading-list">
+          <div v-for="index in 3" :key="index" class="app-loading-card">
+            <div class="app-skeleton app-skeleton--title"></div>
+            <div class="app-skeleton app-skeleton--text"></div>
+            <div class="app-skeleton app-skeleton--text-short"></div>
+          </div>
+        </div>
+        <div v-else-if="comments.length" class="post-detail__comment-list">
           <CommentItem
             v-for="comment in comments"
             :key="comment.id"
@@ -128,7 +160,14 @@
             @toggle-like="toggleCommentLike"
           />
         </div>
-        <a-empty v-else description="还没有评论" />
+        <div v-else class="app-empty-state">
+          <p class="app-empty-state__eyebrow">Comments</p>
+          <h3 class="app-empty-state__title">还没有评论</h3>
+          <p class="app-empty-state__desc">如果你已经登录，可以先发表第一条评论，帮助这篇内容开启讨论。</p>
+          <div v-if="authStore.isLoggedIn && post?.allowComment !== 0" class="app-empty-state__actions">
+            <a-button type="primary" @click="focusCommentInput">我来发第一条</a-button>
+          </div>
+        </div>
       </a-spin>
 
       <div v-if="commentPage.total > commentPage.size" class="post-detail__pager">
@@ -166,6 +205,7 @@ const favoritingPost = ref(false)
 const commentLikeId = ref<number | null>(null)
 const deletingCommentId = ref<number | null>(null)
 const replyingCommentId = ref<number | null>(null)
+const commentInputRef = ref()
 const post = ref<PostDetail | null>(null)
 const comments = ref<CommentItemType[]>([])
 const commentContent = ref('')
@@ -402,6 +442,10 @@ function canDeleteComment(comment: CommentItemType) {
   return currentUserId === comment.user?.id || currentUserId === post.value?.author?.id
 }
 
+function focusCommentInput() {
+  commentInputRef.value?.focus?.()
+}
+
 function changeCommentPage(current: number) {
   commentPage.page = current
   loadComments()
@@ -584,6 +628,15 @@ watch(
   justify-self: end;
 }
 
+.post-detail__skeleton-card {
+  min-height: 420px;
+}
+
+.post-detail__skeleton-cover {
+  width: 100%;
+  height: 220px;
+}
+
 .post-detail__pager {
   display: flex;
   justify-content: center;
@@ -630,6 +683,15 @@ watch(
   .post-detail__author-main {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .post-detail__hero h1 {
+    font-size: clamp(28px, 8vw, 38px);
+  }
+
+  .post-detail__action-bar .arco-btn,
+  .post-detail__comment-form .arco-btn {
+    min-height: 38px;
   }
 }
 </style>

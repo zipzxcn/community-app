@@ -100,6 +100,28 @@ img {
   isolation: isolate;
 }
 
+@keyframes appFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes appShimmer {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
+}
+
 .app-page {
   display: grid;
   gap: var(--app-space-5);
@@ -109,6 +131,7 @@ img {
 .app-panel {
   border: 1px solid var(--app-border-color);
   box-shadow: var(--app-shadow-md);
+  animation: appFadeUp 0.34s ease;
 }
 
 .app-hero {
@@ -246,6 +269,7 @@ img {
   border: 1px dashed var(--app-border-color-strong);
   border-radius: var(--app-radius-lg);
   box-shadow: var(--app-shadow-sm);
+  animation: appFadeUp 0.28s ease;
 }
 
 .app-empty-state--center {
@@ -282,6 +306,56 @@ img {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.app-loading-list {
+  display: grid;
+  gap: 14px;
+}
+
+.app-loading-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-color);
+  border-radius: var(--app-radius-lg);
+  box-shadow: var(--app-shadow-xs);
+}
+
+.app-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, rgba(226, 232, 240, 0.72) 25%, rgba(241, 245, 249, 0.96) 50%, rgba(226, 232, 240, 0.72) 75%);
+  background-size: 200% 100%;
+  border-radius: 10px;
+  animation: appShimmer 1.4s linear infinite;
+}
+
+.app-skeleton--title {
+  width: 42%;
+  height: 22px;
+}
+
+.app-skeleton--text {
+  width: 100%;
+  height: 14px;
+}
+
+.app-skeleton--text-short {
+  width: 62%;
+  height: 14px;
+}
+
+.app-skeleton--avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+}
+
+.app-skeleton--button {
+  width: 96px;
+  height: 34px;
 }
 
 :where(.arco-card) {

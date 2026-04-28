@@ -101,6 +101,18 @@
       <RouterView />
     </main>
 
+    <nav v-if="authStore.isLoggedIn" class="default-layout__mobile-tabbar">
+      <RouterLink v-for="item in mobileTabbar" :key="item.to" :to="item.to" class="default-layout__mobile-tab" @click="mobileMenuOpen = false">
+        <div class="default-layout__mobile-tab-icon">
+          <component :is="item.icon" />
+          <span v-if="item.badge && item.badge > 0" class="default-layout__mobile-tab-badge">
+            {{ item.badge > 99 ? '99+' : item.badge }}
+          </span>
+        </div>
+        <span>{{ item.label }}</span>
+      </RouterLink>
+    </nav>
+
     <footer class="default-layout__footer">
       <div class="default-layout__footer-inner">
         <div>
@@ -172,6 +184,14 @@ const featureNav = computed(() => [
   { to: '/chat', label: '聊天', icon: IconMessage, badge: notificationStore.unread.chatCount },
   { to: '/notifications', label: '通知', icon: IconNotification, badge: notificationStore.unread.total },
   { to: '/me', label: '我的主页', icon: IconUser, badge: 0 },
+])
+
+const mobileTabbar = computed(() => [
+  { to: '/', label: '首页', icon: IconCompass, badge: 0 },
+  { to: '/users/search', label: '找人', icon: IconSearch, badge: 0 },
+  { to: '/posts/publish', label: '发布', icon: IconPlus, badge: 0 },
+  { to: '/notifications', label: '通知', icon: IconNotification, badge: notificationStore.unread.total },
+  { to: '/me', label: '我的', icon: IconUser, badge: 0 },
 ])
 
 async function goTo(path: string) {
@@ -469,6 +489,10 @@ onMounted(async () => {
   padding: 0 24px 28px;
 }
 
+.default-layout__mobile-tabbar {
+  display: none;
+}
+
 .default-layout__footer-inner {
   display: flex;
   align-items: center;
@@ -556,6 +580,7 @@ onMounted(async () => {
 
   .default-layout__main {
     padding: 18px 16px 20px;
+    padding-bottom: 88px;
   }
 
   .default-layout__footer {
@@ -570,6 +595,65 @@ onMounted(async () => {
 
   .default-layout__footer-meta {
     text-align: left;
+  }
+
+  .default-layout__mobile-tabbar {
+    position: fixed;
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    z-index: 45;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(18px);
+    border: 1px solid var(--app-border-color);
+    border-radius: 20px;
+    box-shadow: var(--app-shadow-lg);
+  }
+
+  .default-layout__mobile-tab {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    padding: 8px 4px;
+    color: var(--app-text-3);
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 14px;
+  }
+
+  .default-layout__mobile-tab.router-link-active {
+    color: var(--app-primary);
+    background: rgba(236, 253, 245, 0.95);
+  }
+
+  .default-layout__mobile-tab-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+  }
+
+  .default-layout__mobile-tab-badge {
+    position: absolute;
+    top: -3px;
+    right: -7px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    color: #fff;
+    font-size: 10px;
+    line-height: 16px;
+    text-align: center;
+    background: #ef4444;
+    border-radius: 999px;
   }
 }
 

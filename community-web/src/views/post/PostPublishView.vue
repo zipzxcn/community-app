@@ -781,12 +781,25 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 
+  .post-publish__header h1 {
+    font-size: clamp(28px, 8vw, 36px);
+  }
+
+  .post-publish__header-desc {
+    line-height: 1.75;
+  }
+
   .post-publish__actions {
     display: grid;
   }
 
   .post-publish__action-buttons {
     justify-content: flex-start;
+  }
+
+  .post-publish__action-buttons .arco-btn,
+  .post-publish__header-actions .arco-btn {
+    min-height: 38px;
   }
 }
 </style>

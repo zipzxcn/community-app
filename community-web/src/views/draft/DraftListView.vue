@@ -10,8 +10,15 @@
       </RouterLink>
     </div>
 
-    <a-spin :loading="loading">
-      <div v-if="drafts.length" class="draft-list__items">
+    <a-spin :loading="false">
+      <div v-if="loading && !drafts.length" class="app-loading-list">
+        <div v-for="index in 3" :key="index" class="app-loading-card">
+          <div class="app-skeleton app-skeleton--title"></div>
+          <div class="app-skeleton app-skeleton--text"></div>
+          <div class="app-skeleton app-skeleton--text-short"></div>
+        </div>
+      </div>
+      <div v-else-if="drafts.length" class="draft-list__items">
         <a-card v-for="draft in drafts" :key="draft.id" :bordered="false" class="draft-list__item">
           <div>
             <h2>{{ draft.title }}</h2>
@@ -27,7 +34,16 @@
           </div>
         </a-card>
       </div>
-      <a-empty v-else description="暂无草稿" />
+      <div v-else class="app-empty-state app-empty-state--center">
+        <p class="app-empty-state__eyebrow">Drafts</p>
+        <h3 class="app-empty-state__title">暂无草稿</h3>
+        <p class="app-empty-state__desc">你可以先去创建一篇新帖子，系统会在你编辑过程中自动保存为草稿。</p>
+        <div class="app-empty-state__actions">
+          <RouterLink to="/posts/publish">
+            <a-button type="primary">开始写作</a-button>
+          </RouterLink>
+        </div>
+      </div>
     </a-spin>
 
     <div v-if="page.total > page.size" class="draft-list__pager">

@@ -14,8 +14,19 @@
       />
     </div>
 
-    <a-spin :loading="loading">
-      <div v-if="users.length" class="user-search__list">
+    <a-spin :loading="false">
+      <div v-if="loading && !users.length" class="app-loading-list">
+        <div v-for="index in 4" :key="index" class="app-loading-card">
+          <div class="user-search__skeleton-head">
+            <div class="app-skeleton app-skeleton--avatar"></div>
+            <div class="user-search__skeleton-copy">
+              <div class="app-skeleton app-skeleton--title"></div>
+              <div class="app-skeleton app-skeleton--text-short"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div v-else-if="users.length" class="user-search__list">
         <article v-for="user in users" :key="user.id" class="user-search__item">
           <RouterLink :to="`/users/${user.id}`" class="user-search__main">
             <a-avatar :size="44">
@@ -32,7 +43,17 @@
           </RouterLink>
         </article>
       </div>
-      <a-empty v-else description="暂无用户" />
+      <div v-else class="app-empty-state app-empty-state--center">
+        <p class="app-empty-state__eyebrow">Discover</p>
+        <h3 class="app-empty-state__title">没有找到匹配用户</h3>
+        <p class="app-empty-state__desc">试试输入用户名、昵称关键词，或者先清空搜索词重新查看社区里的全部用户。</p>
+        <div class="app-empty-state__actions">
+          <a-button type="primary" @click="searchFirstPage">重新搜索</a-button>
+          <a-button v-if="keyword.trim()" @click="clearKeyword">
+            清空关键词
+          </a-button>
+        </div>
+      </div>
     </a-spin>
 
     <div v-if="pageState.total > pageState.size" class="user-search__pager">
@@ -81,6 +102,11 @@ function searchFirstPage() {
 function changePage(page: number) {
   pageState.page = page
   loadUsers()
+}
+
+function clearKeyword() {
+  keyword.value = ''
+  searchFirstPage()
 }
 
 loadUsers()
@@ -157,6 +183,18 @@ loadUsers()
 .user-search__pager {
   display: flex;
   justify-content: center;
+}
+
+.user-search__skeleton-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-search__skeleton-copy {
+  display: grid;
+  gap: 10px;
+  width: min(280px, 100%);
 }
 
 @media (max-width: 720px) {

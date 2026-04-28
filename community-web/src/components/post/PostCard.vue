@@ -262,7 +262,8 @@ const displayInitial = computed(() => (props.post.author?.nickname || props.post
 
 @media (max-width: 720px) {
   .post-card__main {
-    padding: 18px;
+    gap: 14px;
+    padding: 16px;
   }
 
   .post-card__top {
@@ -275,7 +276,21 @@ const displayInitial = computed(() => (props.post.author?.nickname || props.post
   }
 
   .post-card__cover {
-    height: 160px;
+    height: 148px;
+  }
+
+  .post-card__body h2 {
+    font-size: 20px;
+  }
+
+  .post-card__meta {
+    gap: 6px;
+  }
+
+  .post-card__meta span {
+    min-height: 30px;
+    padding: 0 8px;
+    font-size: 11px;
   }
 }
 </style>

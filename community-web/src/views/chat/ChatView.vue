@@ -32,8 +32,20 @@
           </div>
           <strong>{{ threads.length }}</strong>
         </div>
-        <a-spin :loading="threadLoading">
-          <div v-if="threads.length" class="chat-view__thread-list">
+        <a-spin :loading="false">
+          <div v-if="threadLoading && !threads.length" class="app-loading-list">
+            <div v-for="index in 4" :key="index" class="app-loading-card">
+              <div class="chat-view__thread-skeleton">
+                <div class="app-skeleton app-skeleton--avatar"></div>
+                <div class="chat-view__thread-skeleton-copy">
+                  <div class="app-skeleton app-skeleton--title"></div>
+                  <div class="app-skeleton app-skeleton--text"></div>
+                  <div class="app-skeleton app-skeleton--text-short"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-else-if="threads.length" class="chat-view__thread-list">
             <button
               v-for="item in threads"
               :key="`${item.peerUser.id}-${item.threadId ?? 'new'}`"
@@ -100,8 +112,14 @@
             </a-button>
           </div>
 
-          <a-spin :loading="messageLoading">
-            <div ref="messageListRef" class="chat-view__message-list">
+          <a-spin :loading="false">
+            <div v-if="messageLoading && !messages.length" class="app-loading-list chat-view__message-loading">
+              <div v-for="index in 4" :key="index" class="app-loading-card">
+                <div class="app-skeleton app-skeleton--text-short"></div>
+                <div class="app-skeleton app-skeleton--text"></div>
+              </div>
+            </div>
+            <div v-else ref="messageListRef" class="chat-view__message-list">
               <article
                 v-for="message in messages"
                 :key="message.id"
@@ -547,8 +565,9 @@ onUnmounted(() => {
 
 .chat-view__body {
   display: grid;
-  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1.45fr);
   gap: 18px;
+  align-items: stretch;
 }
 
 .chat-view__threads,
@@ -556,6 +575,24 @@ onUnmounted(() => {
   min-height: 680px;
   border-radius: 22px;
   box-shadow: 0 16px 48px rgba(15, 23, 42, 0.06);
+}
+
+.chat-view__messages {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+.chat-view__messages :deep(.arco-card-body) {
+  display: grid;
+  grid-template-rows: inherit;
+  min-height: 100%;
+  min-width: 0;
+}
+
+.chat-view__threads :deep(.arco-card-body) {
+  display: grid;
+  align-content: start;
+  min-width: 0;
 }
 
 .chat-view__empty-panel {
@@ -592,6 +629,18 @@ onUnmounted(() => {
 
 .chat-view__thread-list {
   display: grid;
+  gap: 10px;
+}
+
+.chat-view__thread-skeleton {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.chat-view__thread-skeleton-copy {
+  display: grid;
+  flex: 1;
   gap: 10px;
 }
 
@@ -682,10 +731,16 @@ onUnmounted(() => {
 .chat-view__message-list {
   display: grid;
   gap: 12px;
-  height: 440px;
-  padding: 6px 2px;
+  min-height: 520px;
+  height: 100%;
+  padding: 8px 4px;
   overflow-y: auto;
   scrollbar-width: thin;
+}
+
+.chat-view__message-loading {
+  min-height: 240px;
+  align-content: start;
 }
 
 .chat-view__message-item {
@@ -698,7 +753,8 @@ onUnmounted(() => {
 }
 
 .chat-view__message-bubble {
-  max-width: min(78%, 540px);
+  min-width: 124px;
+  max-width: min(86%, 760px);
   padding: 14px 16px;
   background: linear-gradient(180deg, #ffffff, #f8fafc);
   border: 1px solid rgba(15, 23, 42, 0.08);
@@ -758,6 +814,7 @@ onUnmounted(() => {
 
   .chat-view__message-list {
     height: 360px;
+    min-height: 360px;
   }
 }
 
@@ -781,6 +838,19 @@ onUnmounted(() => {
   .chat-view__panel-head {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .chat-view__messages {
+    grid-template-rows: auto auto minmax(300px, 1fr) auto;
+  }
+
+  .chat-view__message-list {
+    padding-inline: 0;
+  }
+
+  .chat-view__message-bubble {
+    min-width: 0;
+    max-width: 90%;
   }
 }
 </style>

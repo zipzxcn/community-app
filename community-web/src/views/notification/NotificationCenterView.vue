@@ -73,8 +73,15 @@
         </div>
       </div>
 
-      <a-spin :loading="loading">
-        <div v-if="notifications.length" class="notification-center__list">
+      <a-spin :loading="false">
+        <div v-if="loading && !notifications.length" class="app-loading-list">
+          <div v-for="index in 4" :key="index" class="app-loading-card">
+            <div class="app-skeleton app-skeleton--title"></div>
+            <div class="app-skeleton app-skeleton--text"></div>
+            <div class="app-skeleton app-skeleton--text-short"></div>
+          </div>
+        </div>
+        <div v-else-if="notifications.length" class="notification-center__list">
           <article
             v-for="item in notifications"
             :key="item.id"

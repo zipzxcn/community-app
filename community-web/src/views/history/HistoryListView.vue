@@ -16,8 +16,15 @@
       </div>
     </div>
 
-    <a-spin :loading="loading">
-      <div v-if="histories.length" class="history-list__items">
+    <a-spin :loading="false">
+      <div v-if="loading && !histories.length" class="app-loading-list">
+        <div v-for="index in 3" :key="index" class="app-loading-card">
+          <div class="app-skeleton app-skeleton--title"></div>
+          <div class="app-skeleton app-skeleton--text"></div>
+          <div class="app-skeleton app-skeleton--text-short"></div>
+        </div>
+      </div>
+      <div v-else-if="histories.length" class="history-list__items">
         <a-card v-for="item in histories" :key="item.id" :bordered="false" class="history-list__item">
           <div class="history-list__item-main">
             <div class="history-list__item-copy">
@@ -42,7 +49,16 @@
           </div>
         </a-card>
       </div>
-      <a-empty v-else description="还没有浏览历史" />
+      <div v-else class="app-empty-state app-empty-state--center">
+        <p class="app-empty-state__eyebrow">History</p>
+        <h3 class="app-empty-state__title">还没有浏览历史</h3>
+        <p class="app-empty-state__desc">去首页或用户主页继续浏览内容，打开帖子详情后就会自动沉淀到这里。</p>
+        <div class="app-empty-state__actions">
+          <RouterLink to="/">
+            <a-button type="primary">回到首页</a-button>
+          </RouterLink>
+        </div>
+      </div>
     </a-spin>
 
     <div v-if="page.total > page.size" class="history-list__pager">

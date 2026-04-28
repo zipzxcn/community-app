@@ -521,6 +521,18 @@ onMounted(async () => {
 }
 
 @media (max-width: 720px) {
+  .home-view__hero {
+    gap: 18px;
+  }
+
+  .home-view__hero h1 {
+    font-size: clamp(28px, 8vw, 38px);
+  }
+
+  .home-view__hero-desc {
+    line-height: 1.75;
+  }
+
   .home-view__filter-controls {
     grid-template-columns: 1fr;
   }
@@ -532,6 +544,17 @@ onMounted(async () => {
 
   .home-view__quick-links {
     width: 100%;
+  }
+
+  .home-view__quick-links :deep(.app-chip),
+  .home-view__filter-summary :deep(.app-chip) {
+    min-height: 36px;
+    padding-inline: 10px;
+    font-size: 12px;
+  }
+
+  .home-view__side-card {
+    gap: 12px;
   }
 }
 </style>

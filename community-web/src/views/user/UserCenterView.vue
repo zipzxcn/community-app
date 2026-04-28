@@ -629,12 +629,14 @@ onMounted(async () => {
 .user-center__hero-main {
   display: grid;
   gap: 20px;
+  min-width: 0;
 }
 
 .user-center__identity {
   display: flex;
   align-items: flex-start;
   gap: 18px;
+  min-width: 0;
 }
 
 .user-center__avatar {
@@ -647,6 +649,7 @@ onMounted(async () => {
 .user-center__identity-copy {
   display: grid;
   gap: 8px;
+  min-width: 0;
 }
 
 .user-center__eyebrow {
@@ -675,10 +678,12 @@ onMounted(async () => {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
 }
 
 .user-center__hero-side {
   display: grid;
+  min-width: 0;
 }
 
 .user-center__quick-card {
@@ -711,6 +716,28 @@ onMounted(async () => {
 
 .user-center__panel :deep(.arco-card-body) {
   padding: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.user-center__panel :deep(.arco-tabs) {
+  min-width: 0;
+}
+
+.user-center__panel :deep(.arco-tabs-nav) {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+}
+
+.user-center__panel :deep(.arco-tabs-nav-tab-list) {
+  flex-wrap: nowrap;
+  width: max-content;
+}
+
+.user-center__panel :deep(.arco-tabs-content) {
+  min-width: 0;
 }
 
 .user-center__form {
@@ -805,6 +832,7 @@ onMounted(async () => {
 .user-center__post-item {
   display: grid;
   gap: 10px;
+  min-width: 0;
 }
 
 .user-center__post-actions {
@@ -892,6 +920,14 @@ onMounted(async () => {
     align-items: flex-start;
   }
 
+  .user-center__hero {
+    gap: 18px;
+  }
+
+  .user-center__identity {
+    gap: 14px;
+  }
+
   .user-center__avatar-editor {
     grid-template-columns: 1fr;
   }
@@ -900,6 +936,51 @@ onMounted(async () => {
   .user-center__user-actions {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .user-center__identity-copy h1 {
+    font-size: clamp(26px, 8vw, 34px);
+  }
+
+  .user-center__identity-copy > p:last-of-type {
+    line-height: 1.7;
+  }
+
+  .user-center__identity-chips {
+    gap: 10px;
+  }
+
+  .user-center__identity-chips .app-chip {
+    max-width: 100%;
+    padding-inline: 11px;
+    font-size: 12px;
+  }
+
+  .user-center__quick-card h3 {
+    font-size: 18px;
+    line-height: 1.3;
+  }
+
+  .user-center__quick-actions :deep(.arco-btn) {
+    min-height: 40px;
+  }
+
+  .user-center__post-actions .arco-btn,
+  .user-center__user-actions .arco-btn {
+    min-height: 36px;
+  }
+
+  .user-center__post-actions,
+  .user-center__user-actions {
+    gap: 10px;
+  }
+
+  .user-center__panel {
+    padding-top: 14px;
+  }
+
+  .user-center__panel :deep(.arco-tabs-nav-tab) {
+    flex-shrink: 0;
   }
 }
 </style>

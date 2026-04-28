@@ -335,5 +335,13 @@ watch(
     flex-direction: column;
     align-items: flex-start;
   }
+
+  .user-profile__identity-copy h1 {
+    font-size: clamp(26px, 8vw, 34px);
+  }
+
+  .user-profile__actions .arco-btn {
+    min-height: 38px;
+  }
 }
 </style>
