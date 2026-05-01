@@ -8,6 +8,12 @@ import lombok.Data;
  */
 public class TagVo {
 
+    /**
+     * 标签 ID。
+     */
     private Long id;
+    /**
+     * 名称字段，例如标签名。
+     */
     private String name;
 }

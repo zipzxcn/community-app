@@ -11,9 +11,21 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ApiResponse<T> {
 
+    /**
+     * 业务状态码，0 表示成功，非 0 表示失败。
+     */
     private Integer code;
+    /**
+     * 接口响应描述，便于前端直接提示用户。
+     */
     private String message;
+    /**
+     * 真正的业务载荷，成功时由各模块返回具体结构。
+     */
     private T data;
+    /**
+     * 预留请求追踪 ID，方便接入网关或日志链路追踪。
+     */
     private String requestId;
 
     /**

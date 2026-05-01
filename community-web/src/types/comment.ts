@@ -1,6 +1,9 @@
 import type { PageQuery } from './api'
 import type { UserSummary } from './user'
 
+/**
+ * 评论模块类型：评论树、评论请求、回复请求。
+ */
 export interface CommentItem {
   id: number
   postId: number

@@ -41,6 +41,11 @@ import java.util.stream.Collectors;
 /**
  * 草稿服务实现：草稿 CRUD 与一键发布。
  */
+/**
+ * 草稿服务实现：
+ * - 解决发帖流程中“内容还没准备好但不想丢失输入”的问题。
+ * - 支持手动保存、自动保存、草稿发布转正式帖子。
+ */
 @Service
 public class DraftServiceImpl implements DraftService {
 
@@ -111,6 +116,7 @@ public class DraftServiceImpl implements DraftService {
         List<Long> attachmentFileIds = normalizeIds(request.getAttachmentFileIds());
         validateTagIds(tagIds);
         validateAttachmentFileIds(currentUserId, attachmentFileIds);
+        // 草稿直接保存 Markdown、标签、附件引用，方便后续继续编辑或一键发布。
         PostDraft draft = PostDraft.builder()
                 .userId(currentUserId)
                 .title(request.getTitle())
@@ -193,6 +199,7 @@ public class DraftServiceImpl implements DraftService {
         request.setTagIds(readIdList(draft.getTagIdsJson()));
         request.setAttachmentFileIds(readIdList(draft.getAttachmentFileIdsJson()));
 
+        // 发布草稿本质上仍复用 PostService.create，避免草稿与正式发帖逻辑分叉。
         Long postId = postService.create(currentUserId, request);
         postDraftMapper.update(null, new LambdaUpdateWrapper<PostDraft>()
                 .eq(PostDraft::getId, draft.getId())

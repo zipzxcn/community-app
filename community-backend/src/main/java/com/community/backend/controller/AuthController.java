@@ -31,6 +31,10 @@ public class AuthController {
         this.authService = authService;
     }
 
+    /**
+     * 获取图形验证码。
+     * 调用链：前端登录/注册页进入时先请求这里，再把 captchaId + captchaCode 一并提交给登录/注册接口。
+     */
     @GetMapping("/captcha")
     public ApiResponse<AuthCaptchaVo> captcha() {
         return ApiResponse.success(authService.captcha());
@@ -41,6 +45,7 @@ public class AuthController {
      */
     @PostMapping("/register")
     public ApiResponse<Map<String, Long>> register(@Valid @RequestBody RegisterRequest request) {
+        // 控制器只负责收参与回包，真正的唯一性校验、密码加密都下沉到服务层。
         Long userId = authService.register(request);
         return ApiResponse.success(Map.of("userId", userId));
     }

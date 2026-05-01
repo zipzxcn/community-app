@@ -53,6 +53,9 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 草稿箱页：承接创作中断后的继续编辑、删除与发布流程。
+ */
 import { onMounted, reactive, ref } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
 import { useRouter } from 'vue-router'
@@ -71,6 +74,8 @@ const page = reactive({
   total: 0,
 })
 
+// load* 系列方法负责从后端拉取页面初始化数据，统一控制 loading 和错误提示。
+// 草稿箱需要把自动保存与手动保存产生的记录统一展示出来。
 async function loadDrafts() {
   loading.value = true
   try {
@@ -86,6 +91,7 @@ async function loadDrafts() {
   }
 }
 
+// 分页切换时只修改页码，再复用同一套加载逻辑，避免数据请求分散。
 function changePage(current: number) {
   page.page = current
   loadDrafts()

@@ -1,3 +1,6 @@
+/**
+ * 用户模块类型：摘要信息、主页信息、当前登录用户与资料更新载荷。
+ */
 export interface UserSummary {
   id: number
   username: string

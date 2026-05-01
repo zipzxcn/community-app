@@ -1,3 +1,9 @@
+/**
+ * 前端路由表：
+ * - 通过 createWebHistory 使用 HTML5 History 模式。
+ * - 业务上把首页、发帖、用户中心、通知、聊天等模块挂到统一布局下。
+ * - requiresAuth 元信息用于登录拦截。
+ */
 import { createRouter, createWebHistory } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -8,6 +14,7 @@ const router = createRouter({
     {
       path: '/',
       component: DefaultLayout,
+      // 所有一期 MVP 页面都复用 DefaultLayout，统一导航、未读徽标与移动端底栏。
       children: [
         {
           path: '',
@@ -89,6 +96,12 @@ const router = createRouter({
   ],
 })
 
+/**
+ * 全局前置守卫：
+ * 1) 先尝试从 localStorage 恢复登录态。
+ * 2) 未登录访问受保护页面时跳转登录页。
+ * 3) 已登录用户访问登录/注册页时重定向回首页。
+ */
 router.beforeEach(async (to) => {
   const authStore = useAuthStore()
   await authStore.restore()

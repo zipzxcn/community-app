@@ -20,9 +20,21 @@ import java.time.LocalDateTime;
  */
 public class PostTagRel {
 
+    /**
+     * 主键 ID。
+     */
     @TableId(type = IdType.AUTO)
     private Long id;
+    /**
+     * 帖子 ID，关联帖子主表。
+     */
     private Long postId;
+    /**
+     * 标签 ID。
+     */
     private Long tagId;
+    /**
+     * 创建时间。
+     */
     private LocalDateTime createdAt;
 }

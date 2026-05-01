@@ -1,3 +1,6 @@
+/**
+ * 通知 Store：集中维护未读汇总，供头部徽标、聊天入口、通知中心共享。
+ */
 import { defineStore } from 'pinia'
 import { fetchUnreadNotificationSummary } from '@/api/notification'
 import type { NotificationUnreadSummary } from '@/types/notification'
@@ -21,6 +24,7 @@ export const useNotificationStore = defineStore('notification', {
       this.unread = { ...EMPTY_SUMMARY }
       this.loading = false
     },
+    // 主动拉取未读汇总，避免每个页面各自重复请求。
     async refreshUnread() {
       this.loading = true
       try {

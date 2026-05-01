@@ -1,3 +1,6 @@
+/**
+ * 文件模块类型：上传凭证、上传完成回调、文件对象信息。
+ */
 export interface UploadTokenPayload {
   bizType: string
   fileName: string

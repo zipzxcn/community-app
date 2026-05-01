@@ -74,6 +74,11 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 评论项组件：
+ * - 递归渲染评论树，既能显示根评论，也能显示回复。
+ * - 不直接发请求，而是通过 emit 把点赞/删除/回复动作交给页面层统一处理。
+ */
 import { computed, ref } from 'vue'
 import type { CommentItem } from '@/types/comment'
 import { formatDateTime, resolveAssetUrl } from '@/utils/format'
@@ -99,6 +104,7 @@ const emit = defineEmits<{
 
 const replying = ref(false)
 const replyContent = ref('')
+// 展示名统一优先昵称，其次用户名，避免页面各处重复写同样的回退逻辑。
 const displayName = computed(() => props.comment.user?.nickname || props.comment.user?.username || '匿名用户')
 const canDelete = computed(() => {
   const currentUserId = props.currentUserId
@@ -111,6 +117,7 @@ const busyLike = computed(() => props.busyLikeId === props.comment.id)
 const busyDelete = computed(() => props.busyDeleteId === props.comment.id)
 const busyReply = computed(() => props.busyReplyId === props.comment.id)
 
+// 组件内部只收集回复内容并派发事件，真正的接口请求由父页面统一处理。
 function submitReply() {
   const content = replyContent.value.trim()
   if (!content) {

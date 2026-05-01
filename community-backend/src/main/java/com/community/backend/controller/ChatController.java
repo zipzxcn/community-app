@@ -45,6 +45,7 @@ public class ChatController {
             @RequestParam(defaultValue = "1") @Min(1) Long page,
             @RequestParam(defaultValue = "20") @Min(1) Long size) {
         // 查询当前用户会话列表
+        // 先从 SecurityContext 中拿当前用户，再把权限边界交给 service 做会话归属校验。
         Long currentUserId = SecurityUtils.requireUserId();
         return ApiResponse.success(chatService.listThreads(currentUserId, page, size));
     }

@@ -40,7 +40,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * 聊天服务实现：会话管理、消息收发、已读同步与互关状态约束。
+ * 聊天服务实现：
+ * - 业务上限制“只有互关用户才允许发起聊天”。
+ * - 技术上采用 REST 持久化消息，WebSocket 只负责实时事件推送。
+ * - 这样可以降低 WebSocket 指令协议复杂度，同时保证刷新页面后历史消息仍可靠可查。
+ * - 适合作为学习“关系限制 + 幂等消息 + 未读同步 + 实时推送”组合场景的示例。
  */
 @Service
 public class ChatServiceImpl implements ChatService {
@@ -76,15 +80,18 @@ public class ChatServiceImpl implements ChatService {
      */
     @Override
     public PageResponse<ChatThreadVo> listThreads(Long currentUserId, Long page, Long size) {
+        // 教学点1：先做分页参数兜底和上限保护，防止前端误传极端值导致一次拉太多数据。
         long safePage = page == null || page < 1 ? 1 : page;
         long safeSize = size == null || size < 1 ? 20 : Math.min(size, 50);
 
+        // 先加载数据库中已经存在的会话，再把“仅互关但尚未开聊”的用户补成虚拟会话入口。
         List<ChatThread> existingThreads = chatThreadMapper.selectList(new LambdaQueryWrapper<ChatThread>()
                 .and(w -> w.eq(ChatThread::getUserAId, currentUserId).or().eq(ChatThread::getUserBId, currentUserId))
                 .orderByDesc(ChatThread::getLastMessageAt)
                 .orderByDesc(ChatThread::getUpdatedAt));
         List<Long> threadIds = existingThreads.stream().map(ChatThread::getId).toList();
         Map<Long, ChatThreadUser> threadUserMap = loadThreadUserMap(currentUserId, threadIds);
+        // 教学点2：数据库中已有会话的对端用户，后续用于避免把同一互关对象重复补进列表。
         Set<Long> existingPeerIds = existingThreads.stream()
                 .map(thread -> getPeerId(thread, currentUserId))
                 .collect(Collectors.toSet());
@@ -99,6 +106,7 @@ public class ChatServiceImpl implements ChatService {
             list.add(toThreadVo(currentUserId, refreshed, threadUserMap.get(refreshed.getId()), peerMap.get(getPeerId(refreshed, currentUserId))));
         }
 
+        // 这里补充还没真正创建 threadId 的互关对象，前端点击后再真正落库创建会话。
         for (Long peerId : mutualPeerIds) {
             if (existingPeerIds.contains(peerId)) {
                 continue;
@@ -146,6 +154,7 @@ public class ChatServiceImpl implements ChatService {
         }
         mustGetActiveUser(targetUserId);
 
+        // 注意：一对一会话通过 userA=min(id), userB=max(id) 固定顺序，避免 A-B 与 B-A 生成两条会话。
         long userA = Math.min(currentUserId, targetUserId);
         long userB = Math.max(currentUserId, targetUserId);
         ChatThread thread = chatThreadMapper.selectOne(new LambdaQueryWrapper<ChatThread>()
@@ -154,6 +163,7 @@ public class ChatServiceImpl implements ChatService {
                 .last("LIMIT 1"));
 
         boolean mutual = isMutualFollow(currentUserId, targetUserId);
+        // 注意：创建会话前先判断互关，业务规则收口在服务层而不是前端页面。
         if (thread == null) {
             if (!mutual) {
                 throw BizException.of(ErrorCode.CHAT_REQUIRE_MUTUAL_FOLLOW);
@@ -212,6 +222,7 @@ public class ChatServiceImpl implements ChatService {
                     .build();
         }
 
+        // 注意：SQL 为了高效按 id 倒序取最近 N 条，返回前再 reverse 成前端更自然的“从旧到新”顺序。
         Collections.reverse(records);
         List<ChatMessageVo> list = records.stream().map(this::toMessageVo).toList();
 
@@ -242,11 +253,13 @@ public class ChatServiceImpl implements ChatService {
         ChatThread thread = mustGetThreadForUser(threadId, currentUserId);
         Long receiverId = getPeerId(thread, currentUserId);
 
+        // 注意：发送消息前再次校验互关，而不是只在开会话时校验，因为关系状态可能在聊天期间发生变化。
         boolean mutual = isMutualFollow(currentUserId, receiverId);
         if (!mutual) {
             // 非互关会话强制切换只读，历史可见但禁止发送
             if (!"READ_ONLY".equals(thread.getStatus())) {
-                chatThreadMapper.update(null, new LambdaUpdateWrapper<ChatThread>()
+                // 注意：会话摘要（最后消息预览/时间）属于“列表页冗余字段”，更新它能让会话列表查询更快。
+        chatThreadMapper.update(null, new LambdaUpdateWrapper<ChatThread>()
                         .eq(ChatThread::getId, threadId)
                         .set(ChatThread::getStatus, "READ_ONLY"));
             }
@@ -258,6 +271,7 @@ public class ChatServiceImpl implements ChatService {
                     .set(ChatThread::getStatus, "ACTIVE"));
         }
 
+        // 注意：clientMsgId 用来做客户端重试幂等，避免网络抖动时同一条消息被重复落库。
         ChatMessage existed = chatMessageMapper.selectOne(new LambdaQueryWrapper<ChatMessage>()
                 .eq(ChatMessage::getSenderId, currentUserId)
                 .eq(ChatMessage::getClientMsgId, request.getClientMsgId())
@@ -266,6 +280,7 @@ public class ChatServiceImpl implements ChatService {
             return toMessageVo(existed);
         }
 
+        // 先把消息落库成功，再更新会话摘要与未读数，保证消息主记录是事实来源。
         ChatMessage message = ChatMessage.builder()
                 .threadId(threadId)
                 .senderId(currentUserId)
@@ -289,6 +304,7 @@ public class ChatServiceImpl implements ChatService {
         // 兜底保证双方都有 thread_user 记录
         ensureThreadUser(threadId, currentUserId);
         ensureThreadUser(threadId, receiverId);
+        // 注意：未读数不在消息表实时聚合，而是直接记在 thread_user 上，查询会话列表时更省成本。
         chatThreadUserMapper.update(null, new LambdaUpdateWrapper<ChatThreadUser>()
                 .eq(ChatThreadUser::getThreadId, threadId)
                 .eq(ChatThreadUser::getUserId, receiverId)
@@ -305,6 +321,7 @@ public class ChatServiceImpl implements ChatService {
                 "收到一条新消息"
         );
 
+        // 注意：实时推送只是“加速器”，不是唯一数据源；即使推送失败，消息也已经落库，可通过 REST 补拉。
         chatPushService.pushToUser(receiverId, "chat.message", toMessageVo(message));
 
         return toMessageVo(message);
@@ -327,6 +344,7 @@ public class ChatServiceImpl implements ChatService {
                 .set(ChatThreadUser::getUnreadCount, 0));
 
         // 批量标记消息已读
+        // 注意：已读推进采用“批量更新 receiver=当前用户 且 id<=lastReadMessageId 的消息”，实现简单直观。
         chatMessageMapper.update(null, new LambdaUpdateWrapper<ChatMessage>()
                 .eq(ChatMessage::getThreadId, threadId)
                 .eq(ChatMessage::getReceiverId, currentUserId)
@@ -380,6 +398,7 @@ public class ChatServiceImpl implements ChatService {
      * 判断双方是否互关。
      */
     private boolean isMutualFollow(Long userId, Long peerId) {
+        // 注意：互关判断拆成双向两次 count，语义最直接，也方便后续替换成更复杂的关系规则。
         long aToB = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
                 .eq(UserFollow::getFollowerId, userId)
                 .eq(UserFollow::getFolloweeId, peerId)

@@ -53,7 +53,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * 帖子服务实现：帖子 CRUD（首批为创建/查询）与点赞收藏互动。
+ * 帖子服务实现：
+ * - 负责帖子从创建、编辑、显隐、删除，到点赞/收藏/详情组装的完整生命周期。
+ * - 还承担标签、附件、通知、统计字段同步等横切逻辑。
+ * - 适合作为学习“聚合根 + 关联表 + 统计字段 + 通知副作用”这一类业务服务的样例。
  */
 @Service
 public class PostServiceImpl implements PostService {
@@ -97,9 +100,12 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long create(Long currentUserId, CreatePostRequest request) {
+        // 注意1：先把输入标签做“去空、去重、保序”归一化，后面所有逻辑都基于干净数据展开。
         LinkedHashSet<Long> uniqueTagIds = normalizeIds(request.getTagIds());
+        // 注意2：在真正写帖子前校验标签合法性，避免出现“帖子已创建成功但标签关联失败”的半成功状态。
         validateTagIds(uniqueTagIds);
 
+        // 帖子主表保存的是编辑核心字段，标签与附件关系通过关联表/文件表维护。
         Post post = Post.builder()
                 .authorId(currentUserId)
                 .title(request.getTitle())
@@ -116,8 +122,10 @@ public class PostServiceImpl implements PostService {
                 .isDeleted(0)
                 .publishedAt(LocalDateTime.now())
                 .build();
+        // 注意3：先插入主表拿到 postId，后续标签关系、附件绑定、通知都依赖这个主键。
         postMapper.insert(post);
 
+        // 注意4：标签关系是典型的多对多，这里通过中间表 post_tag_rel 落地。
         if (!uniqueTagIds.isEmpty()) {
             for (Long tagId : uniqueTagIds) {
                 postTagRelMapper.insert(PostTagRel.builder()
@@ -130,10 +138,12 @@ public class PostServiceImpl implements PostService {
             }
         }
 
+        // 注意5：很多列表页直接展示 postCount，所以这里同步维护冗余计数字段，换取查询时的简单与高效。
         appUserMapper.update(null, new LambdaUpdateWrapper<AppUser>()
                 .eq(AppUser::getId, currentUserId)
                 .setSql("post_count = post_count + 1"));
 
+        // 注意6：附件不是直接塞进帖子表，而是通过 FileObject 的 bizType/bizId 反向绑定到帖子。
         if (!CollectionUtils.isEmpty(request.getAttachmentFileIds())) {
             List<Long> fileIds = request.getAttachmentFileIds().stream()
                     .filter(Objects::nonNull)
@@ -149,6 +159,7 @@ public class PostServiceImpl implements PostService {
             }
         }
 
+        // 新帖子发布后通知粉丝，帮助内容更快被关注者看到。
         createFollowersPostNotifications(post);
 
         return post.getId();
@@ -196,6 +207,7 @@ public class PostServiceImpl implements PostService {
             wrapper.orderByDesc(Post::getPublishedAt);
         }
 
+        // 注意：列表查询先尽量在数据库层完成筛选和排序，减少把大量无关数据拉到内存里再处理。
         Page<Post> result = postMapper.selectPage(page, wrapper);
         if (result.getRecords().isEmpty()) {
             return PageResponse.<PostListItemVo>builder()
@@ -208,6 +220,7 @@ public class PostServiceImpl implements PostService {
         }
 
         List<Long> postIds = result.getRecords().stream().map(Post::getId).toList();
+        // 注意：列表页需要作者、标签、点赞收藏状态等“附加信息”，这里采用批量预加载，避免 N+1 查询。
         Map<Long, UserSummaryVo> authorMap = loadAuthorMap(result.getRecords().stream().map(Post::getAuthorId).toList());
         Map<Long, List<TagVo>> tagMap = loadTagMapByPostIds(postIds);
         Set<Long> likedSet = loadLikedPostSet(currentUserId, postIds);
@@ -249,6 +262,7 @@ public class PostServiceImpl implements PostService {
     public PostDetailVo detail(Long postId, Long currentUserId) {
         Post post = mustGetPublishedPost(postId);
 
+        // 注意：详情页返回体通常不是直接把实体原样返回，而是组装成更贴近前端消费习惯的 VO。
         PostDetailVo vo = new PostDetailVo();
         vo.setId(post.getId());
         vo.setTitle(post.getTitle());
@@ -282,6 +296,7 @@ public class PostServiceImpl implements PostService {
                 .eq(PostLike::getUserId, currentUserId)
                 .eq(PostLike::getPostId, postId)
                 .last("LIMIT 1"));
+        // 注意：点赞/收藏都采用“先查关系表，再决定插入、恢复还是忽略”的幂等写法。
         if (existing == null) {
             postLikeMapper.insert(PostLike.builder()
                     .userId(currentUserId)
@@ -383,6 +398,7 @@ public class PostServiceImpl implements PostService {
     public void update(Long currentUserId, Long postId, UpdatePostRequest request) {
         Post post = mustGetOwnedPost(currentUserId, postId);
 
+        // 注意：编辑帖子只改核心字段；标签和附件属于独立关系，需要单独同步，避免一次 update 过于复杂。
         postMapper.update(null, new LambdaUpdateWrapper<Post>()
                 .eq(Post::getId, post.getId())
                 .set(Post::getTitle, request.getTitle())
@@ -505,6 +521,7 @@ public class PostServiceImpl implements PostService {
         LinkedHashSet<Long> nextTagIds = normalizeIds(inputTagIds);
         validateTagIds(nextTagIds);
 
+        // 注意：同步标签关系常见做法是算出“待新增集合”和“待移除集合”，比先删后插更稳，也更利于维护计数。
         List<PostTagRel> existingRels = postTagRelMapper.selectList(new LambdaQueryWrapper<PostTagRel>()
                 .eq(PostTagRel::getPostId, postId));
         Set<Long> existingTagIds = existingRels.stream()
@@ -546,6 +563,7 @@ public class PostServiceImpl implements PostService {
     private void syncPostAttachments(Long currentUserId, Long postId, List<Long> inputFileIds) {
         LinkedHashSet<Long> nextFileIds = normalizeIds(inputFileIds);
 
+        // 注意：附件同步与标签同步思路类似，都是先求差集，再执行解绑与绑定。
         List<FileObject> existingFiles = fileObjectMapper.selectList(new LambdaQueryWrapper<FileObject>()
                 .eq(FileObject::getBizType, "POST")
                 .eq(FileObject::getBizId, postId)
@@ -567,7 +585,7 @@ public class PostServiceImpl implements PostService {
         }
 
         if (!nextFileIds.isEmpty()) {
-            // 先统一绑定，再按输入顺序回写 sort_order。
+            // 注意：先批量绑定，再逐个回写 sort_order，这样前端拖拽排序结果就能在详情页稳定复现。
             fileObjectMapper.update(null, new LambdaUpdateWrapper<FileObject>()
                     .in(FileObject::getId, nextFileIds)
                     .eq(FileObject::getUploaderId, currentUserId)
@@ -785,6 +803,7 @@ public class PostServiceImpl implements PostService {
      * 帖子点赞通知：发送给帖主。
      */
     private void createPostLikeNotification(Long actorId, Post post) {
+        // 点赞帖子时通知作者，形成作者侧的互动反馈。
         notificationService.create(
                 post.getAuthorId(),
                 actorId,

@@ -68,6 +68,9 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 浏览历史页：帮助用户找回之前看过的帖子。
+ */
 import { onMounted, reactive, ref } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
 import { clearHistories, deleteHistory, fetchHistories } from '@/api/history'
@@ -84,6 +87,8 @@ const page = reactive({
   total: 0,
 })
 
+// load* 系列方法负责从后端拉取页面初始化数据，统一控制 loading 和错误提示。
+// 浏览历史是按用户维度查询的私有数据，仅登录后可见。
 async function loadHistories() {
   loading.value = true
   try {
@@ -99,6 +104,7 @@ async function loadHistories() {
   }
 }
 
+// 分页切换时只修改页码，再复用同一套加载逻辑，避免数据请求分散。
 function changePage(current: number) {
   page.page = current
   loadHistories()

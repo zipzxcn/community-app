@@ -19,12 +19,21 @@ import java.util.Map;
 @Component
 public class JwtTokenProvider {
 
+    /**
+     * JWT 原始签名密钥字符串。
+     */
     @Value("${app.security.jwt.secret:change-this-secret-change-this-secret}")
     private String secret;
 
+    /**
+     * accessToken 过期秒数。
+     */
     @Value("${app.security.jwt.access-token-expire-seconds:7200}")
     private long accessTokenExpireSeconds;
 
+    /**
+     * JJWT 解析与签发时真正使用的 SecretKey 对象。
+     */
     private SecretKey secretKey;
 
     /**

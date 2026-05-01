@@ -8,5 +8,8 @@ import lombok.Data;
  */
 public class ReadAllNotificationRequest {
 
+    /**
+     * 类型字段，用于区分通知类型、消息类型等。
+     */
     private String type;
 }

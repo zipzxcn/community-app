@@ -98,6 +98,7 @@ public class UserServiceImpl implements UserService {
         vo.setFollowed(Boolean.FALSE);
         vo.setMutualFollow(Boolean.FALSE);
 
+        // 游客访问只看公开资料；登录用户访问他人主页时额外补关注/互关状态。
         if (currentUserId != null && !currentUserId.equals(targetUserId)) {
             boolean followed = isActiveFollow(currentUserId, targetUserId);
             vo.setFollowed(followed);
@@ -124,6 +125,7 @@ public class UserServiceImpl implements UserService {
                     .like(AppUser::getNickname, query.getKeyword()));
         }
 
+        // 搜索同时命中 username 和 nickname，解决用户只记得昵称时难以找到对方的问题。
         Page<AppUser> result = appUserMapper.selectPage(page, wrapper);
         List<UserSummaryVo> list = result.getRecords().stream().map(this::toSummaryVo).toList();
 
@@ -142,6 +144,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public UserProfileVo updateProfile(Long currentUserId, UpdateProfileRequest request) {
+        // 只更新前端传入的非空字段，避免资料页局部修改时把其它字段误清空。
         appUserMapper.update(null, new LambdaUpdateWrapper<AppUser>()
                 .eq(AppUser::getId, currentUserId)
                 .eq(AppUser::getIsDeleted, 0)

@@ -36,6 +36,11 @@ import java.util.UUID;
 /**
  * 文件服务实现：上传凭证生成、文件元数据回写与删除。
  */
+/**
+ * 文件服务实现：
+ * - 采用“后端签发上传凭证 + 前端直传对象存储 + 后端回写元数据”的三段式上传流程。
+ * - 这样可以减少后端带宽压力，并保留业务层对文件归属和访问的控制。
+ */
 @Service
 public class FileServiceImpl implements FileService {
 

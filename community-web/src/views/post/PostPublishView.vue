@@ -182,6 +182,9 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 发帖页：同时承载新建帖子、编辑帖子、草稿自动保存等复杂创作流程。
+ */
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -210,6 +213,7 @@ const uploadingAttachments = ref(false)
 const saveStatus = ref('尚未保存')
 const availableTags = ref<Tag[]>([])
 const attachmentFiles = ref<FileObject[]>([])
+// 教学点：表单状态集中放在一个 reactive 对象里，方便草稿保存、发布提交、预览渲染共用同一份数据源。
 const form = reactive({
   title: '',
   coverUrl: '',
@@ -220,6 +224,7 @@ const form = reactive({
 let autosaveTimer: number | undefined
 
 const isEditMode = computed(() => Boolean(props.postId))
+// 教学点：预览区完全基于 form.contentMd 计算得到，做到“编辑区即数据源，预览区只是派生视图”。
 const previewHtml = computed(() => renderMarkdown(form.contentMd))
 const previewTags = computed(() => availableTags.value.filter((tag) => form.tagIds.includes(tag.id)))
 
@@ -261,6 +266,9 @@ function buildPostPayload() {
   }
 }
 
+// load* 系列方法负责从后端拉取页面初始化数据，统一控制 loading 和错误提示。
+// 发帖页先加载标签，为分类选择和内容组织提供基础数据。
+// 教学点：标签属于发帖辅助数据，页面初始化先加载，后续无需重复请求。
 async function loadTags() {
   availableTags.value = await fetchTags()
 }
@@ -332,6 +340,7 @@ function saveDraftManually() {
   saveDraft(false)
 }
 
+// 教学点：封面上传成功后只回填 coverUrl，真正落库仍要等发布或保存草稿时绑定到业务对象。
 async function uploadCover(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -349,6 +358,7 @@ async function uploadCover(event: Event) {
   }
 }
 
+// 教学点：正文图片上传后不仅保存附件列表，还会自动插入 Markdown 图片语法，提高编辑效率。
 async function uploadAttachments(event: Event) {
   const input = event.target as HTMLInputElement
   const files = Array.from(input.files || [])
@@ -392,6 +402,7 @@ function removeAttachmentMarkdown(url: string, name: string) {
     .trim()
 }
 
+// 教学点：这些工具栏按钮本质上是在 textarea 光标区间插入 Markdown 语法糖。
 function wrapSelection(prefix: string, suffix: string) {
   const textarea = editorRef.value?.$el?.querySelector('textarea') as HTMLTextAreaElement | undefined
   if (!textarea) {
@@ -408,6 +419,8 @@ function wrapSelection(prefix: string, suffix: string) {
   })
 }
 
+// 提交时根据是否存在 postId 区分“新建帖子”和“编辑帖子”两条业务路径。
+// 教学点：提交发布时，先做标题/正文等前端校验，再根据模式决定调用 create 还是 update。
 async function submitPost() {
   if (!validateForPublish()) return
   publishing.value = true
@@ -451,6 +464,8 @@ function formatFileSize(value?: number) {
   return `${(value / 1024 / 1024).toFixed(1)} MB`
 }
 
+// 监听路由参数或局部状态变化，保证页面在切换对象后自动刷新。
+// 教学点：监听内容变化做自动保存时，要配合节流/定时器，避免每敲一个字都打接口。
 watch(
   () => [form.title, form.coverUrl, form.contentMd, form.tagIds.join(','), attachmentFiles.value.map((file) => file.id).join(',')],
   scheduleAutoSave,

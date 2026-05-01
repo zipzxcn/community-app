@@ -68,6 +68,9 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 用户搜索页：按用户名或昵称发现社区用户。
+ */
 import { reactive, ref } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { searchUsers } from '@/api/user'
@@ -79,6 +82,8 @@ const loading = ref(false)
 const users = ref<UserSummary[]>([])
 const pageState = reactive({ page: 1, size: 20, total: 0 })
 
+// load* 系列方法负责从后端拉取页面初始化数据，统一控制 loading 和错误提示。
+// 搜索接口允许空关键词，此时等价于浏览一批最近活跃/新加入的用户。
 async function loadUsers() {
   loading.value = true
   try {
@@ -99,6 +104,7 @@ function searchFirstPage() {
   loadUsers()
 }
 
+// 分页切换时只修改页码，再复用同一套加载逻辑，避免数据请求分散。
 function changePage(page: number) {
   pageState.page = page
   loadUsers()

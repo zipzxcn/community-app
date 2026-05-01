@@ -14,10 +14,25 @@ import java.util.List;
 @Getter
 public class LoginUser implements UserDetails {
 
+    /**
+     * 当前登录业务用户 ID，供控制器和服务层做数据隔离。
+     */
     private final Long userId;
+    /**
+     * Spring Security principal 中保存的用户名。
+     */
     private final String username;
+    /**
+     * UserDetails 接口要求的密码字段，这里不参与真实密码校验。
+     */
     private final String password;
+    /**
+     * 当前账号是否启用。
+     */
     private final boolean enabled;
+    /**
+     * Spring Security 识别的权限集合。
+     */
     private final List<SimpleGrantedAuthority> authorities;
 
     /**

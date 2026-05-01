@@ -172,6 +172,9 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 聊天页：会话列表、消息历史、发送消息、已读同步与实时推送统一收口在本页。
+ */
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -183,6 +186,7 @@ import type { ChatMessageItem, ChatReadReceipt, ChatThreadItem, ChatWsEnvelope }
 import { formatDateTime, resolveAssetUrl } from '@/utils/format'
 
 const router = useRouter()
+// 教学点：聊天页支持从别的页面带 query 进来，比如从用户主页点击“发私信”后自动定位到目标用户。
 const route = useRoute()
 const authStore = useAuthStore()
 const chatStore = useChatStore()
@@ -226,6 +230,7 @@ function upsertThread(item: ChatThreadItem) {
   }
 }
 
+// load* 系列方法负责从后端拉取页面初始化数据，统一控制 loading 和错误提示。
 async function loadThreads(options: { silent?: boolean } = {}) {
   if (!options.silent) {
     threadLoading.value = true
@@ -271,6 +276,7 @@ async function markCurrentThreadRead() {
   }
 }
 
+// 消息历史通过 cursor/分页向上翻，避免一次性拉全量记录。
 async function loadMessages(threadId: number, options: { cursor?: number; prepend?: boolean } = {}) {
   if (options.prepend) {
     loadingMore.value = true
@@ -305,6 +311,7 @@ async function ensureThread(item: ChatThreadItem) {
   return opened
 }
 
+// 教学点：选中会话时，如果 threadId 为空，说明这是“互关但未开聊”的占位项，需要先创建真实会话。
 async function selectThread(item: ChatThreadItem) {
   try {
     const resolved = await ensureThread(item)
@@ -368,6 +375,7 @@ async function submitMessage() {
   }
 }
 
+// handle* 系列方法通常对应用户点击动作，例如登录、发布、提交、删除。
 async function handleEnterSend() {
   if (sending.value || activeThread.value?.status !== 'ACTIVE') {
     return
@@ -474,6 +482,7 @@ function stopBackgroundTasks() {
   }
 }
 
+// 监听路由参数或局部状态变化，保证页面在切换对象后自动刷新。
 watch(
   () => route.fullPath,
   async () => {

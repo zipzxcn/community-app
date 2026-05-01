@@ -72,6 +72,9 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 注册页：创建账号前先做人机校验，减少批量注册风险。
+ */
  import { onMounted, reactive, ref } from 'vue'
   import { Message } from '@arco-design/web-vue'
   import { useRouter } from 'vue-router'
@@ -88,6 +91,8 @@ const form = reactive({
   captchaCode: '',
 })
 
+// load* 系列方法负责从后端拉取页面初始化数据，统一控制 loading 和错误提示。
+// 注册页同样使用图形验证码，降低脚本批量注册接口的成功率。
 async function loadCaptcha() {
   try {
     const result = await fetchCaptcha()
@@ -99,6 +104,7 @@ async function loadCaptcha() {
   }
 }
 
+// handle* 系列方法通常对应用户点击动作，例如登录、发布、提交、删除。
 async function handleRegister() {
   if (!form.username || !form.nickname || !form.password || !form.captchaId || !form.captchaCode) {
     Message.warning('请完整填写注册信息和验证码')
@@ -117,6 +123,7 @@ async function handleRegister() {
   }
 }
 
+// 首次进入页面时执行初始化逻辑。
 onMounted(() => {
   loadCaptcha()
 })

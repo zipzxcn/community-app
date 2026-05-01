@@ -14,6 +14,11 @@ import java.util.Base64;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 图形验证码服务：
+ * 1) 当前实现使用内存 ConcurrentHashMap 保存验证码，不依赖 Redis。
+ * 2) 适合单机开发与 MVP 场景，若未来多实例部署，建议迁移到 Redis 等共享存储。
+ */
 @Service
 public class CaptchaServiceImpl implements CaptchaService {
 
@@ -27,10 +32,12 @@ public class CaptchaServiceImpl implements CaptchaService {
 
     @Override
     public AuthCaptchaVo create() {
+        // 先清理过期验证码，避免内存持续堆积。
         purgeExpired();
         String captchaId = UUID.randomUUID().toString().replace("-", "");
         String code = generateCode(4);
         LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(expireSeconds);
+        // 以 captchaId 作为一次性票据，前端提交登录/注册时必须原样带回。
         captchaStore.put(captchaId, new CaptchaEntry(code, expiresAt));
 
         AuthCaptchaVo vo = new AuthCaptchaVo();
@@ -46,6 +53,7 @@ public class CaptchaServiceImpl implements CaptchaService {
         if (!StringUtils.hasText(captchaId) || !StringUtils.hasText(captchaCode)) {
             throw BizException.of(ErrorCode.AUTH_CAPTCHA_INVALID);
         }
+        // 验证成功或失败后都移除，保证验证码只能使用一次。
         CaptchaEntry entry = captchaStore.remove(captchaId);
         if (entry == null || entry.expiresAt().isBefore(LocalDateTime.now())) {
             throw BizException.of(ErrorCode.AUTH_CAPTCHA_EXPIRED);
@@ -74,6 +82,7 @@ public class CaptchaServiceImpl implements CaptchaService {
     }
 
     private String buildSvg(String code) {
+        // 直接拼 SVG 可避免额外图片库依赖，浏览器也能天然展示。
         StringBuilder svg = new StringBuilder();
         svg.append("<svg xmlns='http://www.w3.org/2000/svg' width='132' height='44' viewBox='0 0 132 44'>");
         svg.append("<rect width='132' height='44' rx='10' fill='#f8fafc'/>");

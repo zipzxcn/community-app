@@ -69,6 +69,9 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 登录页：账号密码 + 图形验证码登录，成功后恢复社区主流程。
+ */
  import { onMounted, reactive, ref } from 'vue'
   import { Message } from '@arco-design/web-vue'
   import { useRoute, useRouter } from 'vue-router'
@@ -87,6 +90,8 @@ const form = reactive({
   captchaCode: '',
 })
 
+// load* 系列方法负责从后端拉取页面初始化数据，统一控制 loading 和错误提示。
+// 登录页每次进入或登录失败后都会刷新验证码，避免旧验证码被重复使用。
 async function loadCaptcha() {
   try {
     const result = await fetchCaptcha()
@@ -98,6 +103,7 @@ async function loadCaptcha() {
   }
 }
 
+// handle* 系列方法通常对应用户点击动作，例如登录、发布、提交、删除。
 async function handleLogin() {
   if (!form.username || !form.password || !form.captchaId || !form.captchaCode) {
     Message.warning('请输入用户名、密码和验证码')
@@ -105,6 +111,7 @@ async function handleLogin() {
   }
   submitting.value = true
   try {
+    // 登录成功后，Pinia 会把 accessToken/refreshToken/当前用户信息持久化到 localStorage。
     await authStore.login(form)
     Message.success('登录成功')
     await router.push((route.query.redirect as string) || '/')
@@ -116,6 +123,7 @@ async function handleLogin() {
   }
 }
 
+// 首次进入页面时执行初始化逻辑。
 onMounted(() => {
   loadCaptcha()
 })

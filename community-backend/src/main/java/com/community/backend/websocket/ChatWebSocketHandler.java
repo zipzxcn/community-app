@@ -35,6 +35,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         if (userId == null) {
             return;
         }
+        // 建立连接后先登记 session，后续私信新消息与已读事件就能精准推送到该用户。
         sessionManager.register(userId, session);
         chatPushService.sendToSession(session, "chat.connected", Map.of(
                 "userId", userId,
@@ -47,6 +48,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         try {
             JsonNode payload = objectMapper.readTree(message.getPayload());
             String type = payload.path("type").asText("");
+            // 当前 WebSocket 只做轻量实时推送与心跳保活，真正的消息收发仍走 REST，降低复杂度。
             if ("chat.ping".equals(type)) {
                 chatPushService.sendToSession(session, "chat.pong", Map.of("serverTime", LocalDateTime.now()));
                 return;

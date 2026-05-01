@@ -250,6 +250,9 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 个人中心：资料编辑、我的帖子、点赞收藏、关系管理等聚合入口。
+ */
 import { computed, onMounted, reactive, ref } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -300,6 +303,7 @@ const profileStats = reactive({
 const displayName = computed(() => profileForm.nickname || authStore.userInfo?.username || '我的主页')
 const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase())
 const isPostTab = computed(() => ['posts', 'favorites', 'likes'].includes(activeTab.value))
+// 教学点：当前帖子列表是一个派生视图，会根据 activeTab 和帖子状态筛选动态切换来源。
 const currentPosts = computed(() => {
   if (activeTab.value === 'favorites') return myFavorites.value
   if (activeTab.value === 'likes') return myLikes.value
@@ -373,6 +377,7 @@ const emptyUserText = computed(() => {
   return '暂无关注用户'
 })
 
+// 教学点：这里集中校验登录用户 ID 是否存在，避免后面每个接口调用前都散落重复判断。
 function getCurrentUserId() {
   const id = authStore.userInfo?.id
   if (!id) {
@@ -381,6 +386,7 @@ function getCurrentUserId() {
   return id
 }
 
+// 教学点：保存资料成功后，不仅更新页面本地状态，也要同步更新全局 authStore，确保顶部导航立即生效。
 async function saveProfile() {
   savingProfile.value = true
   try {
@@ -407,6 +413,7 @@ async function saveProfile() {
   }
 }
 
+// handle* 系列方法通常对应用户点击动作，例如登录、发布、提交、删除。
 async function handleAvatarSelected(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -428,6 +435,8 @@ async function handleAvatarSelected(event: Event) {
   }
 }
 
+// load* 系列方法负责从后端拉取页面初始化数据，统一控制 loading 和错误提示。
+// 教学点：根据 tab 分发到不同接口，是“一个页面承载多类列表”时常见的组织方式。
 async function loadPosts(tab: CenterTab) {
   loading.value = true
   try {
@@ -459,6 +468,7 @@ async function loadPosts(tab: CenterTab) {
   }
 }
 
+// 教学点：个人中心资料区和列表区拆开加载，保证即使某个列表失败，资料区仍可正常展示。
 async function loadOwnProfile() {
   try {
     const profile = await fetchUserProfile(getCurrentUserId())
@@ -573,6 +583,7 @@ function removePost(postId: number) {
   })
 }
 
+// 教学点：tab 切换时同步写回路由 query，这样刷新页面后还能回到上次所在的功能区。
 async function handleTabChange(key: string | number) {
   const tab = String(key) as CenterTab
   activeTab.value = tab
@@ -610,6 +621,7 @@ function changeUserPage(page: number) {
   loadUsers(tab)
 }
 
+// 教学点：初始化时先恢复个人资料，再根据路由中的 tab 决定加载哪块工作区数据。
 onMounted(async () => {
   await loadOwnProfile()
   const tab = getInitialTab()

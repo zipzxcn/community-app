@@ -27,6 +27,7 @@ public class ChatWebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        // WebSocket 入口固定为 /ws/chat，前端会基于当前 accessToken 拼接 token 参数发起连接。
         registry.addHandler(chatWebSocketHandler, "/ws/chat")
                 .addInterceptors(chatHandshakeInterceptor)
                 .setAllowedOriginPatterns(corsProperties.getAllowedOrigins().toArray(String[]::new));

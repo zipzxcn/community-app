@@ -30,6 +30,11 @@ import java.util.stream.Collectors;
 /**
  * 浏览历史服务实现：浏览记录、分页查询与删除清理。
  */
+/**
+ * 浏览历史服务实现：
+ * - 在用户访问帖子详情时静默记录浏览轨迹。
+ * - 支持分页查询、删除单条、全部清空，并配合定时任务做历史清理。
+ */
 @Service
 public class HistoryServiceImpl implements HistoryService {
 

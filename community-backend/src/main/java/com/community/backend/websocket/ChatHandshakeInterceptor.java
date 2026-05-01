@@ -27,6 +27,7 @@ public class ChatHandshakeInterceptor implements HandshakeInterceptor {
                                    ServerHttpResponse response,
                                    WebSocketHandler wsHandler,
                                    Map<String, Object> attributes) {
+        // 握手阶段从查询参数中取 token，避免浏览器原生 WebSocket 连接不方便自定义 Authorization 头。
         String token = UriComponentsBuilder.fromUri(request.getURI())
                 .build()
                 .getQueryParams()

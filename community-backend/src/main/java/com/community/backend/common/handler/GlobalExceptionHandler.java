@@ -21,6 +21,10 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    /**
+     * 业务异常直接透传统一错误码。
+     * 解决的问题：避免服务层 if/else 手工拼装错误响应，保持控制器代码干净。
+     */
     @ExceptionHandler(BizException.class)
     public ApiResponse<Void> handleBizException(BizException ex) {
         return ApiResponse.fail(ex.getCode(), ex.getMessage());
@@ -65,6 +69,9 @@ public class GlobalExceptionHandler {
         return ApiResponse.fail(ErrorCode.BUSINESS_BAD_REQUEST.getCode(), message);
     }
 
+    /**
+     * 未兜住的异常统一记日志并返回系统错误，防止堆栈直接暴露给前端。
+     */
     @ExceptionHandler(Exception.class)
     public ApiResponse<Void> handleException(Exception ex) {
         log.error("Unhandled exception", ex);

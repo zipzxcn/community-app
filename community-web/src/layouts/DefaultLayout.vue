@@ -129,6 +129,7 @@
 </template>
 
 <script setup lang="ts">
+// 统一布局层：承载主导航、登录态信息、未读徽标、移动端底栏等跨页面公共能力。
 import { computed, onMounted, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import {
@@ -156,6 +157,7 @@ const chatStore = useChatStore()
 const notificationStore = useNotificationStore()
 const mobileMenuOpen = ref(false)
 
+// 顶部未读摘要把通知未读与聊天未读合并展示，强化用户对“有新消息”的感知。
 const unreadSummary = computed(() => {
   const unread = notificationStore.unread.total + notificationStore.unread.chatCount
   return unread > 99 ? '99+' : unread
@@ -207,6 +209,7 @@ async function handleLogout() {
   await router.push('/')
 }
 
+// 监听登录态：登录后建立聊天连接并刷新未读，退出时主动断开并清空状态。
 watch(
   () => authStore.isLoggedIn,
   async (loggedIn) => {

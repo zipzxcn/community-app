@@ -25,6 +25,7 @@ public class MinioClientConfig {
                 || !StringUtils.hasText(storageProperties.getSecretKey())) {
             throw BizException.of(ErrorCode.STORAGE_CONFIG_INCOMPLETE);
         }
+        // MinioClient 属于 io.minio:minio 依赖，是对象存储直传、查询和删除操作的核心入口。
         return MinioClient.builder()
                 .endpoint(storageProperties.getEndpoint())
                 .credentials(storageProperties.getAccessKey(), storageProperties.getSecretKey())

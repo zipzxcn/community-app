@@ -2,6 +2,9 @@ import type { PageQuery } from './api'
 import type { FileObject } from './file'
 import type { Tag } from './post'
 
+/**
+ * 草稿模块类型：草稿列表、详情、保存载荷。
+ */
 export interface DraftItem {
   id: number
   title: string

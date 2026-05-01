@@ -121,6 +121,9 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 公开主页：展示他人资料、公开帖子，以及关注/私信关系。
+ */
 import { computed, reactive, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import PostCard from '@/components/post/PostCard.vue'
@@ -145,6 +148,8 @@ const canFollow = computed(() => authStore.isLoggedIn && authStore.userInfo?.id 
 const canChat = computed(() => canFollow.value && profile.value?.mutualFollow)
 const displayInitial = computed(() => (profile.value?.nickname || profile.value?.username || 'U').slice(0, 1).toUpperCase())
 
+// load* 系列方法负责从后端拉取页面初始化数据，统一控制 loading 和错误提示。
+// 公开主页同时查询基础资料与公开帖子，保证页面一次进入就能形成完整上下文。
 async function loadProfile() {
   loading.value = true
   try {
@@ -164,6 +169,7 @@ async function loadProfile() {
   }
 }
 
+// 关注/取关成功后重新拉一次主页数据，确保互关状态和统计值同步刷新。
 async function toggleFollow() {
   if (!profile.value) return
   followLoading.value = true
@@ -183,11 +189,13 @@ async function toggleFollow() {
   }
 }
 
+// 分页切换时只修改页码，再复用同一套加载逻辑，避免数据请求分散。
 function changePage(page: number) {
   pageState.page = page
   loadProfile()
 }
 
+// 监听路由参数或局部状态变化，保证页面在切换对象后自动刷新。
 watch(
   () => props.userId,
   () => {

@@ -1,23 +1,34 @@
+# Spring Boot 基础配置：应用名、环境、JSON 序列化与上传限制。
 spring:
   application:
+    # 应用名，日志、监控与配置中心常用该值进行标识。
     name: community-backend
   profiles:
+    # 激活环境，默认走 dev。
     active: dev
   jackson:
+    # Jackson 配置：统一 JSON 序列化规则，避免空字段噪音与时间戳可读性问题。
     default-property-inclusion: non_null
     serialization:
       write-dates-as-timestamps: false
   servlet:
+    # 上传文件大小限制，防止超大文件拖垮接口。
     multipart:
       max-file-size: 10MB
       max-request-size: 20MB
 
+
+# Web 服务配置：端口与上下文路径。
 server:
+  # 后端 API 服务监听端口。
   port: 8080
   servlet:
     context-path: /
 
+
+# MyBatis-Plus 配置：Mapper 扫描、逻辑删除、驼峰映射与 SQL 日志。
 mybatis-plus:
+  # XML Mapper 扫描路径。
   mapper-locations: classpath*:mapper/**/*.xml
   type-aliases-package: com.community.backend.entity
   global-config:
@@ -30,19 +41,27 @@ mybatis-plus:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
+
+# OpenAPI/Swagger 文档配置：便于前后端联调。
 springdoc:
   api-docs:
+    # 是否启用 OpenAPI JSON 文档。
     enabled: true
   swagger-ui:
     enabled: true
     path: /swagger-ui.html
 
+
+# Actuator 运维端点暴露配置。
 management:
   endpoints:
+    # 控制哪些运维端点可通过 HTTP 访问。
     web:
       exposure:
         include: health,info
 
+
+# 自定义业务配置：跨域、安全、存储、定时清理等都挂在 app.* 下。
 app:
   cors:
     # 前后端分离本地联调默认来源；生产环境请替换为正式域名。

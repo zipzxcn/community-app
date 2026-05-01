@@ -10,7 +10,10 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 
 /**
- * 定时清理过期浏览历史。
+ * 浏览历史清理任务：
+ * - 通过 Spring @Scheduled 定时触发。
+ * - 解决浏览历史长期累积导致数据膨胀的问题。
+ * - 保留天数和 cron 都由配置驱动，方便不同环境灵活调整。
  */
 @Component
 public class HistoryCleanupTask {
@@ -29,6 +32,7 @@ public class HistoryCleanupTask {
         if (!historyCleanupProperties.isEnabled()) {
             return;
         }
+        // 至少按 1 天兜底，避免错误配置 0 或负数时把所有数据一次性清空。
         LocalDateTime expireBefore = LocalDateTime.now().minusDays(Math.max(historyCleanupProperties.getRetentionDays(), 1));
         userBrowseHistoryMapper.delete(new LambdaQueryWrapper<UserBrowseHistory>()
                 .lt(UserBrowseHistory::getLastViewedAt, expireBefore));

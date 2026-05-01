@@ -29,6 +29,12 @@ import java.util.stream.Collectors;
 /**
  * 关注服务实现：关注关系维护、统计字段维护与通知触发。
  */
+/**
+ * 关注服务实现：
+ * - 维护关注/取关关系。
+ * - 同步双方统计值。
+ * - 为聊天“互关才能私信”的业务规则提供基础数据。
+ */
 @Service
 public class FollowServiceImpl implements FollowService {
 
@@ -53,6 +59,7 @@ public class FollowServiceImpl implements FollowService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void follow(Long currentUserId, Long targetUserId) {
+        // 先挡住自关注这种无意义请求，避免污染关系表和统计字段。
         if (currentUserId.equals(targetUserId)) {
             throw BizException.of(ErrorCode.FOLLOW_SELF_NOT_ALLOWED);
         }
@@ -367,6 +374,7 @@ public class FollowServiceImpl implements FollowService {
      * 关注动作通知：发送给被关注者。
      */
     private void createFollowNotification(Long actorId, Long receiverId) {
+        // 关注行为会产生通知，帮助被关注用户及时感知新增关系。
         notificationService.create(
                 receiverId,
                 actorId,

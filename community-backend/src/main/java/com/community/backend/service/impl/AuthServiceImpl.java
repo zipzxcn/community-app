@@ -67,6 +67,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long register(RegisterRequest request) {
+        // 第一步先校验图形验证码，防止接口被脚本暴力刷注册。
         captchaService.validate(request.getCaptchaId(), request.getCaptchaCode());
         AppUser existed = appUserMapper.selectOne(new LambdaQueryWrapper<AppUser>()
                 .eq(AppUser::getUsername, request.getUsername())
@@ -100,6 +101,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(rollbackFor = Exception.class)
     public LoginVo login(LoginRequest request) {
         captchaService.validate(request.getCaptchaId(), request.getCaptchaCode());
+        // 登录查询只命中未删除用户，避免逻辑删除账号继续被尝试登录。
         AppUser user = appUserMapper.selectOne(new LambdaQueryWrapper<AppUser>()
                 .eq(AppUser::getUsername, request.getUsername())
                 .eq(AppUser::getIsDeleted, 0)
@@ -112,6 +114,7 @@ public class AuthServiceImpl implements AuthService {
             throw BizException.of(ErrorCode.AUTH_ACCOUNT_STATUS_INVALID);
         }
 
+        // accessToken 给接口鉴权使用；refreshToken 用于续签，两者职责分离。
         String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getUsername());
         String refreshToken = UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "");
         String refreshTokenHash = TokenHashUtils.sha256(refreshToken);
@@ -168,6 +171,7 @@ public class AuthServiceImpl implements AuthService {
         String newRefreshTokenHash = TokenHashUtils.sha256(newRefreshToken);
         LocalDateTime now = LocalDateTime.now();
 
+        // refresh 采用“轮换”策略：每次刷新都替换旧 refreshToken，降低长期令牌泄漏风险。
         refreshSessionMapper.update(null, new LambdaUpdateWrapper<AuthRefreshSession>()
                 .eq(AuthRefreshSession::getId, session.getId())
                 .set(AuthRefreshSession::getRefreshTokenHash, newRefreshTokenHash)

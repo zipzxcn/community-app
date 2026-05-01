@@ -68,6 +68,7 @@ public class FileController {
     @Operation(summary = "公开读取文件", description = "通过后端代理读取文件内容")
     @GetMapping("/public/{fileId}")
     public ResponseEntity<InputStreamResource> publicFile(@PathVariable Long fileId) {
+        // 这里走后端代理读取文件，而不是直接暴露桶策略，便于后续做鉴权、审计与缓存控制。
         FileDownloadVo download = fileService.loadPublicFile(fileId);
         MediaType mediaType = StringUtils.hasText(download.contentType())
                 ? MediaType.parseMediaType(download.contentType())

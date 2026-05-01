@@ -1,5 +1,8 @@
 import type { CurrentUser } from './user'
 
+/**
+ * 认证模块类型：登录、注册、验证码、登录返回结构。
+ */
 export interface LoginPayload {
   username: string
   password: string

@@ -1,3 +1,8 @@
+/**
+ * 聊天连接 Store：
+ * - 管理 WebSocket 连接状态、重连、事件广播。
+ * - 业务设计上采用 REST + WebSocket 混合模式：消息收发走 REST，实时提醒走 WebSocket。
+ */
 import { defineStore } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
@@ -17,6 +22,7 @@ function clearReconnectTimer() {
   }
 }
 
+// 兼容显式配置的 VITE_WS_BASE_URL 与基于当前站点自动推导的两种连接方式。
 function resolveWebSocketUrl(token: string) {
   const explicit = import.meta.env.VITE_WS_BASE_URL
   if (explicit) {
@@ -70,6 +76,7 @@ export const useChatStore = defineStore('chat', {
         this.connectionState = 'connected'
         this.lastError = ''
       }
+      // 服务端推送 chat.message / chat.read 时，顺手刷新通知红点，保持顶部状态栏同步。
       socket.onmessage = (event) => {
         try {
           const payload = JSON.parse(event.data) as ChatWsEnvelope

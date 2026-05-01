@@ -38,6 +38,11 @@ import java.util.stream.Collectors;
 /**
  * 评论服务实现：评论树查询、评论/回复、删除与评论点赞。
  */
+/**
+ * 评论服务实现：
+ * - 支持根评论与回复两级/多级关系。
+ * - 负责同步评论数、回复数、点赞状态和通知触达。
+ */
 @Service
 public class CommentServiceImpl implements CommentService {
 
@@ -69,6 +74,7 @@ public class CommentServiceImpl implements CommentService {
     @Transactional(rollbackFor = Exception.class)
     public CommentItemVo createComment(Long currentUserId, Long postId, CreateCommentRequest request) {
         Post post = mustGetCommentEnabledPost(postId);
+        // 先创建评论主记录，再回写帖子评论计数，保持统计值与明细表一致。
         PostComment comment = PostComment.builder()
                 .postId(post.getId())
                 .userId(currentUserId)
@@ -82,6 +88,7 @@ public class CommentServiceImpl implements CommentService {
         postCommentMapper.insert(comment);
         increasePostCommentCount(postId);
         // 评论帖子后通知帖子作者
+        // 评论/回复会触达被评论者或帖主，增强社区互动反馈闭环。
         notificationService.create(
                 post.getAuthorId(),
                 currentUserId,
@@ -308,6 +315,7 @@ public class CommentServiceImpl implements CommentService {
      * 校验帖子可见且允许评论。
      */
     private Post mustGetCommentEnabledPost(Long postId) {
+        // 评论之前先确认帖子可见且允许评论，避免对隐藏/关闭评论的帖子继续写入。
         Post post = mustGetVisiblePost(postId);
         if (post.getAllowComment() == null || post.getAllowComment() == 0) {
             throw BizException.of(ErrorCode.COMMENT_CLOSED);

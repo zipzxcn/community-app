@@ -1,5 +1,11 @@
+/**
+ * 轻量 Markdown 渲染工具：
+ * - 当前只支持标题、列表、图片、链接、粗体、斜体、行内代码等基础能力。
+ * - 适合 MVP 阶段避免额外引入大型 Markdown 依赖。
+ */
 import { resolveAssetUrl } from '@/utils/format'
 
+// 先做 HTML 转义，避免用户输入原始 HTML 时直接注入到页面。
 function escapeHtml(value: string) {
   return value
     .replace(/&/g, '&amp;')
@@ -24,6 +30,9 @@ function applyInlineMarkdown(value: string) {
     })
 }
 
+/**
+ * 把 Markdown 文本渲染成 HTML 字符串，供 v-html 使用。
+ */
 export function renderMarkdown(value?: string) {
   const source = escapeHtml(value || '')
   if (!source.trim()) {

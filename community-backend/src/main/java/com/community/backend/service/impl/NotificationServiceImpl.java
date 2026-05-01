@@ -29,6 +29,11 @@ import java.util.stream.Collectors;
 /**
  * 通知服务实现：通知创建、分页查询与已读状态维护。
  */
+/**
+ * 通知服务实现：
+ * - 统一承接点赞、评论、关注、聊天等系统内事件。
+ * - 让其它业务模块只关心“创建通知”，无需各自处理未读统计。
+ */
 @Service
 public class NotificationServiceImpl implements NotificationService {
 
@@ -56,6 +61,7 @@ public class NotificationServiceImpl implements NotificationService {
             return;
         }
 
+        // 通知统一落表，前端再按 type/targetType 做分类展示。
         UserNotification notification = UserNotification.builder()
                 .receiverId(receiverId)
                 .actorId(actorId)

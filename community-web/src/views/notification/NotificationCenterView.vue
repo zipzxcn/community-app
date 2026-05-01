@@ -147,6 +147,9 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 通知中心：汇总点赞、评论、关注、聊天等提醒。
+ */
 import { computed, onMounted, reactive, ref } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -231,6 +234,8 @@ async function syncRoute() {
   })
 }
 
+// load* 系列方法负责从后端拉取页面初始化数据，统一控制 loading 和错误提示。
+// 通知中心既查列表，也会驱动顶部未读徽标的刷新。
 async function loadNotifications() {
   loading.value = true
   try {
@@ -308,6 +313,7 @@ async function openTarget(item: NotificationItem) {
   }
 }
 
+// handle* 系列方法通常对应用户点击动作，例如登录、发布、提交、删除。
 async function handleFilterChange() {
   page.page = 1
   await syncRoute()
@@ -329,6 +335,7 @@ async function resetFilters() {
   await loadNotifications()
 }
 
+// 分页切换时只修改页码，再复用同一套加载逻辑，避免数据请求分散。
 async function changePage(current: number) {
   page.page = current
   await syncRoute()

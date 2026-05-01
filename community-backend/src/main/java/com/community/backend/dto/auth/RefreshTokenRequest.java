@@ -9,6 +9,9 @@ import lombok.Data;
  */
 public class RefreshTokenRequest {
 
+    /**
+     * 用于续签 accessToken 的长效令牌原文，只在客户端保存。
+     */
     @NotBlank(message = "refreshToken 不能为空")
     private String refreshToken;
 }

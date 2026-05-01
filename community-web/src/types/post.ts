@@ -2,6 +2,9 @@ import type { FileObject } from './file'
 import type { PageQuery } from './api'
 import type { UserSummary } from './user'
 
+/**
+ * 帖子模块类型：标签、帖子列表、帖子详情、发帖查询与载荷。
+ */
 export interface Tag {
   id: number
   name: string
@@ -25,6 +28,7 @@ export interface PostListItem {
   favorited: boolean
 }
 
+// 详情页比列表项多正文、附件 ID、评论开关等字段。
 export interface PostDetail extends Omit<PostListItem, 'excerpt'> {
   contentMd: string
   contentHtml?: string

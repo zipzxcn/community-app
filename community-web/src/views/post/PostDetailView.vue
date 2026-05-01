@@ -178,6 +178,9 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 帖子详情页：展示正文、评论树、附件、互动状态与浏览记录。
+ */
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
 import { useRouter } from 'vue-router'
@@ -220,6 +223,7 @@ const canReplyComment = computed(() => authStore.isLoggedIn && post.value?.allow
 const contentHtml = computed(() => renderMarkdown(post.value?.contentMd))
 const displayInitial = computed(() => (post.value?.author?.nickname || post.value?.author?.username || '匿').slice(0, 1).toUpperCase())
 
+// 教学点：把“未登录时弹确认框并跳登录页”的逻辑抽成公共函数，避免每个互动按钮重复写一遍。
 function requireLogin() {
   if (authStore.isLoggedIn) return true
   Modal.confirm({
@@ -230,6 +234,8 @@ function requireLogin() {
   return false
 }
 
+// load* 系列方法负责从后端拉取页面初始化数据，统一控制 loading 和错误提示。
+// 教学点：详情主数据单独加载，便于点赞/收藏后只刷新局部，不必每次都把评论一起重拉。
 async function loadPost() {
   loading.value = true
   try {
@@ -242,11 +248,13 @@ async function loadPost() {
   }
 }
 
+// 教学点：浏览历史是“静默副作用”，失败不阻塞主流程，所以这里故意吞掉错误。
 async function recordBrowseHistory() {
   if (!authStore.isLoggedIn || !post.value) return
   await recordHistory(post.value.id).catch(() => undefined)
 }
 
+// 教学点：评论和帖子详情拆开请求，可以让评论分页独立工作，也便于后续懒加载。
 async function loadComments() {
   commentsLoading.value = true
   try {
@@ -269,6 +277,7 @@ async function togglePostLike() {
   if (!post.value || !requireLogin()) return
   likingPost.value = true
   try {
+    // 教学点：这里采用本地乐观更新计数，用户不需要等重新请求详情就能立刻看到 UI 反馈。
     if (post.value.liked) {
       await unlikePost(post.value.id)
       post.value.liked = false
@@ -289,6 +298,7 @@ async function togglePostFavorite() {
   if (!post.value || !requireLogin()) return
   favoritingPost.value = true
   try {
+    // 收藏与点赞同理，也是先本地改状态，再由接口结果兜底。
     if (post.value.favorited) {
       await unfavoritePost(post.value.id)
       post.value.favorited = false
@@ -344,6 +354,7 @@ function removePost() {
   })
 }
 
+// 评论提交通常会触发帖子评论数和通知数的联动刷新。
 async function submitComment() {
   if (post.value?.allowComment === 0) {
     Message.warning('当前帖子已关闭评论')
@@ -357,6 +368,7 @@ async function submitComment() {
   }
   submittingComment.value = true
   try {
+    // 教学点：评论成功后这里选择“重新拉帖子 + 重新拉评论”，代码更稳，代价是一次额外请求。
     await createComment(props.postId, { content })
     commentContent.value = ''
     Message.success('评论已发布')
@@ -377,6 +389,7 @@ async function submitReply(payload: { comment: CommentItemType; content: string 
   if (!requireLogin()) return
   replyingCommentId.value = payload.comment.id
   try {
+    // 教学点：回复接口路径中带 commentId，请求体里再带 parentId，是为了同时兼顾路由语义和服务端校验。
     await replyComment(payload.comment.id, {
       parentId: payload.comment.id,
       content: payload.content,
@@ -420,6 +433,7 @@ async function toggleCommentLike(comment: CommentItemType) {
   if (!requireLogin()) return
   commentLikeId.value = comment.id
   try {
+    // 评论点赞直接在当前评论对象上原地修改，不必整页重刷，交互更丝滑。
     if (comment.liked) {
       await unlikeComment(comment.id)
       comment.liked = false
@@ -451,12 +465,14 @@ function changeCommentPage(current: number) {
   loadComments()
 }
 
+// 教学点：首次进入详情页时，按“详情 -> 历史 -> 评论”的顺序跑，主内容优先可见。
 onMounted(async () => {
   await loadPost()
   await recordBrowseHistory()
   await loadComments()
 })
 
+// 监听路由参数或局部状态变化，保证页面在切换对象后自动刷新。
 watch(
   () => props.postId,
   async () => {

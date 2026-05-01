@@ -21,6 +21,7 @@ public class CorsConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        // 这里集中把 application.yml 中的 app.cors.* 映射成 Spring Web 可识别的跨域策略对象。
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(corsProperties.getAllowedOrigins());
         config.setAllowedMethods(corsProperties.getAllowedMethods());

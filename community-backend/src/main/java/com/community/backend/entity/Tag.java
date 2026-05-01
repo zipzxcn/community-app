@@ -20,11 +20,29 @@ import java.time.LocalDateTime;
  */
 public class Tag {
 
+    /**
+     * 主键 ID。
+     */
     @TableId(type = IdType.AUTO)
     private Long id;
+    /**
+     * 名称字段，例如标签名。
+     */
     private String name;
+    /**
+     * 业务状态字段，不同对象有各自的枚举语义，例如 ACTIVE、PUBLISHED、HIDDEN。
+     */
     private String status;
+    /**
+     * 用户已发布帖子数或标签关联帖子数等统计值。
+     */
     private Integer postCount;
+    /**
+     * 创建时间。
+     */
     private LocalDateTime createdAt;
+    /**
+     * 最后更新时间。
+     */
     private LocalDateTime updatedAt;
 }

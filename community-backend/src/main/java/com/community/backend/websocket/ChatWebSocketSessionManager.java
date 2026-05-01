@@ -15,10 +15,17 @@ public class ChatWebSocketSessionManager {
 
     private final ConcurrentHashMap<Long, Set<WebSocketSession>> sessionsByUser = new ConcurrentHashMap<>();
 
+    /**
+     * 注册用户在线会话。
+     * 使用 ConcurrentHashMap + KeySetView 支持并发写入，适合多请求同时建立连接的场景。
+     */
     public void register(Long userId, WebSocketSession session) {
         sessionsByUser.computeIfAbsent(userId, key -> ConcurrentHashMap.newKeySet()).add(session);
     }
 
+    /**
+     * 注销单个连接；如果该用户已无任何在线连接，则连用户键一并移除。
+     */
     public void unregister(Long userId, WebSocketSession session) {
         Set<WebSocketSession> sessions = sessionsByUser.get(userId);
         if (sessions == null) {

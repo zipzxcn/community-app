@@ -48,6 +48,11 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 帖子卡片组件：
+ * - 首页、个人主页、个人中心等多个列表场景复用该卡片。
+ * - 组件只负责展示，不直接承担点赞收藏等写操作，保持列表渲染轻量。
+ */
 import { computed } from 'vue'
 import { IconEye, IconMessage, IconStar, IconThumbUp } from '@arco-design/web-vue/es/icon'
 import type { PostListItem } from '@/types/post'
@@ -57,6 +62,7 @@ const props = defineProps<{
   post: PostListItem
 }>()
 
+// 作者头像缺失时退化为首字母占位，减少因为缺少资源导致的版面空洞。
 const displayInitial = computed(() => (props.post.author?.nickname || props.post.author?.username || '匿').slice(0, 1).toUpperCase())
 </script>
 

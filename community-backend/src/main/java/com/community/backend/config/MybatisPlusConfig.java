@@ -17,6 +17,7 @@ public class MybatisPlusConfig {
      */
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
+        // PaginationInnerInterceptor 来自 MyBatis-Plus，可自动改写分页 SQL，避免每个查询手写 limit/offset。
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
         interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
         return interceptor;

@@ -9,6 +9,9 @@ import lombok.Data;
  */
 public class HidePostRequest {
 
+    /**
+     * 是否隐藏帖子，true 表示下架，false 表示恢复展示。
+     */
     @NotNull(message = "hidden 不能为空")
     private Boolean hidden;
 }
