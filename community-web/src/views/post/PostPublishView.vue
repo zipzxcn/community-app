@@ -5,7 +5,7 @@
         <p class="post-publish__eyebrow">Compose Workspace</p>
         <h1>{{ isEditMode ? '编辑帖子' : currentDraftId ? '从草稿继续发布' : '发布新帖子' }}</h1>
         <p class="post-publish__header-desc">
-          当前工作台支持 Markdown 编辑、标签选择、封面上传、正文附件、草稿保存和实时预览，适合作为一期内容生产主入口。
+          当前工作台支持 Markdown 编辑、标签选择、封面上传、正文附件、草稿保存和实时预览<!--，适合作为一期内容生产主入口。-->
         </p>
 
         <div class="app-stat-grid">

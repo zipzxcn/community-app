@@ -6,6 +6,7 @@ import com.community.backend.dto.auth.RefreshTokenRequest;
 import com.community.backend.dto.auth.RegisterRequest;
 import com.community.backend.security.SecurityUtils;
 import com.community.backend.service.AuthService;
+import com.community.backend.vo.auth.AuthCaptchaVo;
 import com.community.backend.vo.auth.CurrentUserVo;
 import com.community.backend.vo.auth.LoginVo;
 import jakarta.validation.Valid;
@@ -28,6 +29,11 @@ public class AuthController {
 
     public AuthController(AuthService authService) {
         this.authService = authService;
+    }
+
+    @GetMapping("/captcha")
+    public ApiResponse<AuthCaptchaVo> captcha() {
+        return ApiResponse.success(authService.captcha());
     }
 
     /**

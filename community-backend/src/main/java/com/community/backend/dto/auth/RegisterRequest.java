@@ -21,4 +21,11 @@ public class RegisterRequest {
     @NotBlank(message = "昵称不能为空")
     @Size(max = 32, message = "昵称长度不能超过32位")
     private String nickname;
+
+    @NotBlank(message = "验证码标识不能为空")
+    private String captchaId;
+
+    @NotBlank(message = "验证码不能为空")
+    @Size(min = 4, max = 8, message = "验证码长度不正确")
+    private String captchaCode;
 }

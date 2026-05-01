@@ -5,7 +5,7 @@
         <p class="home-view__eyebrow">Community Home</p>
         <h1>发现新内容，加入真实讨论</h1>
         <p class="home-view__hero-desc">
-          在这里浏览最新帖子、关注高热话题、进入作者主页继续互动。当前首页聚焦内容发现、关系建立与发帖入口三类核心动作。
+<!--          在这里浏览最新帖子、关注高热话题、进入作者主页继续互动。当前首页聚焦内容发现、关系建立与发帖入口三类核心动作。-->
         </p>
 
         <div class="app-stat-grid home-view__hero-stats">

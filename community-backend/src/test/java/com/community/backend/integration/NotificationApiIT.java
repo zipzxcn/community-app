@@ -46,5 +46,31 @@ class NotificationApiIT extends SupportApiTest {
         JsonNode markAllComment = patchJson("/api/v1/notifications/read-all", Map.of("type", "COMMENT"), receiver.accessToken());
         assertOk(markAllComment);
     }
-}
 
+    @Test
+    void shouldNotifyFollowersWhenAuthorPublishesPost() throws Exception {
+        Session author = createAndLogin("it_notice_author");
+        Session follower = createAndLogin("it_notice_follower");
+
+        assertOk(postJson("/api/v1/follows/" + author.userId(), Map.of(), follower.accessToken()));
+        Long postId = createPost(author.accessToken(), "关注推送测试帖", "关注推送测试正文");
+
+        JsonNode list = getJson("/api/v1/notifications?page=1&size=20&type=FOLLOW", follower.accessToken());
+        assertOk(list);
+        Assertions.assertTrue(list.path("data").path("list").isArray());
+        Assertions.assertTrue(containsPostNotification(list.path("data").path("list"), postId));
+    }
+
+    private boolean containsPostNotification(JsonNode list, Long postId) {
+        if (list == null || !list.isArray()) {
+            return false;
+        }
+        for (JsonNode item : list) {
+            if ("POST".equals(item.path("targetType").asText())
+                    && postId.longValue() == item.path("targetId").asLong()) {
+                return true;
+            }
+        }
+        return false;
+    }
+}

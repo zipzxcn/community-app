@@ -14,6 +14,8 @@ import com.community.backend.mapper.AppUserMapper;
 import com.community.backend.mapper.AuthRefreshSessionMapper;
 import com.community.backend.security.JwtTokenProvider;
 import com.community.backend.service.AuthService;
+import com.community.backend.service.CaptchaService;
+import com.community.backend.vo.auth.AuthCaptchaVo;
 import com.community.backend.vo.auth.CurrentUserVo;
 import com.community.backend.vo.auth.LoginVo;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +37,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuthRefreshSessionMapper refreshSessionMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final CaptchaService captchaService;
 
     @Value("${app.security.jwt.refresh-token-expire-seconds:1209600}")
     private long refreshTokenExpireSeconds;
@@ -42,11 +45,18 @@ public class AuthServiceImpl implements AuthService {
     public AuthServiceImpl(AppUserMapper appUserMapper,
                            AuthRefreshSessionMapper refreshSessionMapper,
                            PasswordEncoder passwordEncoder,
-                           JwtTokenProvider jwtTokenProvider) {
+                           JwtTokenProvider jwtTokenProvider,
+                           CaptchaService captchaService) {
         this.appUserMapper = appUserMapper;
         this.refreshSessionMapper = refreshSessionMapper;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.captchaService = captchaService;
+    }
+
+    @Override
+    public AuthCaptchaVo captcha() {
+        return captchaService.create();
     }
 
     /**
@@ -57,6 +67,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long register(RegisterRequest request) {
+        captchaService.validate(request.getCaptchaId(), request.getCaptchaCode());
         AppUser existed = appUserMapper.selectOne(new LambdaQueryWrapper<AppUser>()
                 .eq(AppUser::getUsername, request.getUsername())
                 .eq(AppUser::getIsDeleted, 0)
@@ -88,6 +99,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public LoginVo login(LoginRequest request) {
+        captchaService.validate(request.getCaptchaId(), request.getCaptchaCode());
         AppUser user = appUserMapper.selectOne(new LambdaQueryWrapper<AppUser>()
                 .eq(AppUser::getUsername, request.getUsername())
                 .eq(AppUser::getIsDeleted, 0)

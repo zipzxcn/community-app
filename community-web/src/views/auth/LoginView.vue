@@ -44,6 +44,13 @@
           <a-form-item field="password" label="密码">
             <a-input-password v-model="form.password" placeholder="请输入密码" allow-clear />
           </a-form-item>
+          <a-form-item field="captchaCode" label="图形验证码">
+            <div class="auth-card__captcha-row">
+              <a-input v-model="form.captchaCode" placeholder="请输入验证码" allow-clear />
+              <button class="auth-card__captcha-image" type="button" @click="loadCaptcha" v-html="captchaSvg"></button>
+              <a-button type="outline" @click="loadCaptcha">换一张</a-button>
+            </div>
+          </a-form-item>
 
           <div class="auth-card__submit">
             <a-button type="primary" long size="large" :loading="submitting" @click="handleLogin">登录</a-button>
@@ -60,23 +67,38 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
-import { Message } from '@arco-design/web-vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+ import { onMounted, reactive, ref } from 'vue'
+  import { Message } from '@arco-design/web-vue'
+  import { useRoute, useRouter } from 'vue-router'
+ import { fetchCaptcha } from '@/api/auth'
+  import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const submitting = ref(false)
+const captchaSvg = ref('')
 const form = reactive({
   username: '',
   password: '',
+  captchaId: '',
+  captchaCode: '',
 })
 
+async function loadCaptcha() {
+  try {
+    const result = await fetchCaptcha()
+    form.captchaId = result.captchaId
+    form.captchaCode = ''
+    captchaSvg.value = result.captchaSvg
+  } catch (error) {
+    Message.error(error instanceof Error ? error.message : '验证码加载失败')
+  }
+}
+
 async function handleLogin() {
-  if (!form.username || !form.password) {
-    Message.warning('请输入用户名和密码')
+  if (!form.username || !form.password || !form.captchaId || !form.captchaCode) {
+    Message.warning('请输入用户名、密码和验证码')
     return
   }
   submitting.value = true
@@ -86,10 +108,15 @@ async function handleLogin() {
     await router.push((route.query.redirect as string) || '/')
   } catch (error) {
     Message.error(error instanceof Error ? error.message : '登录失败')
+    await loadCaptcha()
   } finally {
     submitting.value = false
   }
 }
+
+onMounted(() => {
+  loadCaptcha()
+})
 </script>
 
 <style scoped lang="scss">
@@ -217,6 +244,31 @@ async function handleLogin() {
   margin-top: 6px;
 }
 
+.auth-card__captcha-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.auth-card__captcha-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid var(--app-border-color);
+  border-radius: 10px;
+}
+
+.auth-card__captcha-image :deep(svg) {
+  width: 132px;
+  height: 44px;
+  display: block;
+}
+
 .auth-card__footer {
   display: flex;
   justify-content: center;
@@ -254,6 +306,10 @@ async function handleLogin() {
 
   .auth-page__hero h1 {
     font-size: clamp(28px, 8vw, 38px);
+  }
+
+  .auth-card__captcha-row {
+    grid-template-columns: 1fr;
   }
 }
 </style>

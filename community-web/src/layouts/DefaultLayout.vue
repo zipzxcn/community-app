@@ -10,7 +10,7 @@
               <small>内容社区 · 一期 MVP</small>
             </span>
           </RouterLink>
-          <p class="default-layout__slogan">围绕帖子、关系、通知与私信的社区闭环已经打通，当前进入 UI 统一与体验打磨阶段。</p>
+          <p class="default-layout__slogan"><!--围绕帖子、关系、通知与私信的社区闭环已经打通，当前进入 UI 统一与体验打磨阶段。--></p>
         </div>
 
         <div class="default-layout__header-controls">

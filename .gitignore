@@ -34,9 +34,5 @@ build/
 
 #
 /community-backend/src/main/resources/mapper/application-prod.yml
-
 *.docx
-/docs/想法.txt
-/docs/一期社区平台.docx
-/docs/生产落地方案.md
-
+/docs/**

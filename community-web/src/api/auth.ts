@@ -1,6 +1,10 @@
 import client from '@/api/client'
 import type { CurrentUser } from '@/types/user'
-import type { LoginPayload, LoginResult, RegisterPayload } from '@/types/auth'
+import type { AuthCaptcha, LoginPayload, LoginResult, RegisterPayload } from '@/types/auth'
+
+export function fetchCaptcha() {
+  return client.get<never, AuthCaptcha>('/auth/captcha')
+}
 
 export function login(payload: LoginPayload) {
   return client.post<never, LoginResult>('/auth/login', payload)

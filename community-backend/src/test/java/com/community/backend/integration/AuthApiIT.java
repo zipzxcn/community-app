@@ -40,5 +40,35 @@ class AuthApiIT extends SupportApiTest {
                 null);
         Assertions.assertEquals(20014, refreshAfterLogout.path("code").asInt());
     }
-}
 
+    @Test
+    void shouldRejectInvalidCaptchaWhenLogin() throws Exception {
+        String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        String username = "it_captcha_" + suffix;
+        String password = "12345678";
+        String nickname = "IT_" + suffix;
+
+        CaptchaData registerCaptcha = fetchCaptcha();
+        JsonNode register = postJson("/api/v1/auth/register",
+                Map.of(
+                        "username", username,
+                        "password", password,
+                        "nickname", nickname,
+                        "captchaId", registerCaptcha.captchaId(),
+                        "captchaCode", registerCaptcha.captchaCode()
+                ),
+                null);
+        assertOk(register);
+
+        CaptchaData loginCaptcha = fetchCaptcha();
+        JsonNode login = postJson("/api/v1/auth/login",
+                Map.of(
+                        "username", username,
+                        "password", password,
+                        "captchaId", loginCaptcha.captchaId(),
+                        "captchaCode", "WRNG"
+                ),
+                null);
+        Assertions.assertEquals(20016, login.path("code").asInt());
+    }
+}

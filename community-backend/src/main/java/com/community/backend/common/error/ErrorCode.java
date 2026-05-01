@@ -25,6 +25,8 @@ public enum ErrorCode {
     AUTH_ACCOUNT_STATUS_INVALID(20013, "账号状态不可用"),
     AUTH_REFRESH_TOKEN_INVALID(20014, "refreshToken 无效"),
     AUTH_REFRESH_TOKEN_EXPIRED(20015, "refreshToken 已过期"),
+    AUTH_CAPTCHA_INVALID(20016, "图形验证码错误"),
+    AUTH_CAPTCHA_EXPIRED(20017, "图形验证码已过期"),
 
     // ===== 用户（21xxx）=====
     USER_NOT_FOUND(21001, "用户不存在"),

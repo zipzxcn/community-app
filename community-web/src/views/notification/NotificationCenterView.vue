@@ -4,7 +4,7 @@
       <div class="notification-center__hero-main">
         <p>Inbox</p>
         <h1>通知中心</h1>
-        <span>统一查看点赞、评论、关注、系统消息，并支持单条或批量已读。</span>
+        <span>统一查看点赞、评论、关注、关注用户发帖、系统消息，并支持单条或批量已读。</span>
         <div class="notification-center__hero-stats">
           <article>
             <strong>{{ unread.chatCount }}</strong>
@@ -12,7 +12,7 @@
           </article>
           <article>
             <strong>{{ unread.followCount }}</strong>
-            <span>关注提醒</span>
+            <span>关注/发帖</span>
           </article>
           <article>
             <strong>{{ unread.commentCount + unread.postLikeCount }}</strong>
@@ -46,7 +46,7 @@
             <a-radio value="ALL">全部</a-radio>
             <a-radio value="POST_LIKE">点赞</a-radio>
             <a-radio value="COMMENT">评论</a-radio>
-            <a-radio value="FOLLOW">关注</a-radio>
+            <a-radio value="FOLLOW">关注/发帖</a-radio>
             <a-radio value="CHAT">聊天</a-radio>
             <a-radio value="SYSTEM">系统</a-radio>
           </a-radio-group>
@@ -186,7 +186,7 @@ const currentFilterUnreadCount = computed(() => {
 const summaryCards = computed(() => [
   { key: 'postLike', label: '点赞', value: unread.value.postLikeCount },
   { key: 'comment', label: '评论', value: unread.value.commentCount },
-  { key: 'follow', label: '关注', value: unread.value.followCount },
+  { key: 'follow', label: '关注/发帖', value: unread.value.followCount },
   { key: 'chat', label: '聊天', value: unread.value.chatCount },
   { key: 'system', label: '系统', value: unread.value.systemCount },
 ])
@@ -194,7 +194,7 @@ const summaryCards = computed(() => [
 const typeLabelMap: Record<NotificationType, string> = {
   POST_LIKE: '点赞',
   COMMENT: '评论',
-  FOLLOW: '关注',
+  FOLLOW: '关注/发帖',
   CHAT: '聊天',
   SYSTEM: '系统',
 }

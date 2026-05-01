@@ -18,6 +18,7 @@ import com.community.backend.entity.PostFavorite;
 import com.community.backend.entity.PostLike;
 import com.community.backend.entity.PostTagRel;
 import com.community.backend.entity.Tag;
+import com.community.backend.entity.UserFollow;
 import com.community.backend.mapper.AppUserMapper;
 import com.community.backend.mapper.FileObjectMapper;
 import com.community.backend.mapper.PostFavoriteMapper;
@@ -25,6 +26,7 @@ import com.community.backend.mapper.PostLikeMapper;
 import com.community.backend.mapper.PostMapper;
 import com.community.backend.mapper.PostTagRelMapper;
 import com.community.backend.mapper.TagMapper;
+import com.community.backend.mapper.UserFollowMapper;
 import com.community.backend.service.NotificationService;
 import com.community.backend.service.PostService;
 import com.community.backend.vo.file.FileObjectVo;
@@ -64,15 +66,17 @@ public class PostServiceImpl implements PostService {
     private final PostFavoriteMapper postFavoriteMapper;
     private final FileObjectMapper fileObjectMapper;
     private final NotificationService notificationService;
+    private final UserFollowMapper userFollowMapper;
 
     public PostServiceImpl(PostMapper postMapper,
                            TagMapper tagMapper,
                            PostTagRelMapper postTagRelMapper,
-                           AppUserMapper appUserMapper,
-                           PostLikeMapper postLikeMapper,
-                           PostFavoriteMapper postFavoriteMapper,
-                           FileObjectMapper fileObjectMapper,
-                           NotificationService notificationService) {
+                            AppUserMapper appUserMapper,
+                            PostLikeMapper postLikeMapper,
+                            PostFavoriteMapper postFavoriteMapper,
+                            FileObjectMapper fileObjectMapper,
+                            NotificationService notificationService,
+                            UserFollowMapper userFollowMapper) {
         this.postMapper = postMapper;
         this.tagMapper = tagMapper;
         this.postTagRelMapper = postTagRelMapper;
@@ -81,6 +85,7 @@ public class PostServiceImpl implements PostService {
         this.postFavoriteMapper = postFavoriteMapper;
         this.fileObjectMapper = fileObjectMapper;
         this.notificationService = notificationService;
+        this.userFollowMapper = userFollowMapper;
     }
 
     /**
@@ -143,6 +148,8 @@ public class PostServiceImpl implements PostService {
                         .set(FileObject::getStatus, "BOUND"));
             }
         }
+
+        createFollowersPostNotifications(post);
 
         return post.getId();
     }
@@ -787,5 +794,30 @@ public class PostServiceImpl implements PostService {
                 "你的帖子收到点赞",
                 "有人赞了你的帖子《" + post.getTitle() + "》"
         );
+    }
+
+    private void createFollowersPostNotifications(Post post) {
+        List<Long> followerIds = userFollowMapper.selectList(new LambdaQueryWrapper<UserFollow>()
+                        .eq(UserFollow::getFolloweeId, post.getAuthorId())
+                        .eq(UserFollow::getStatus, "ACTIVE"))
+                .stream()
+                .map(UserFollow::getFollowerId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (followerIds.isEmpty()) {
+            return;
+        }
+        for (Long followerId : followerIds) {
+            notificationService.create(
+                    followerId,
+                    post.getAuthorId(),
+                    NotificationType.FOLLOW,
+                    NotificationTargetType.POST,
+                    post.getId(),
+                    "你关注的用户发布了新帖子",
+                    "你关注的作者发布了《" + post.getTitle() + "》"
+            );
+        }
     }
 }

@@ -14,6 +14,8 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -42,6 +44,8 @@ public abstract class SupportApiTest {
     protected record Session(String username, String password, Long userId, String accessToken, String refreshToken) {
     }
 
+    private static final Pattern CAPTCHA_TEXT_PATTERN = Pattern.compile("<text[^>]*>([A-Z0-9])</text>");
+
     /**
      * 创建唯一账号并登录，返回会话信息。
      */
@@ -50,16 +54,29 @@ public abstract class SupportApiTest {
         String username = prefix + "_" + suffix;
         String password = "12345678";
         String nickname = "IT_" + suffix;
+        CaptchaData registerCaptcha = fetchCaptcha();
 
         JsonNode register = postJson("/api/v1/auth/register",
-                Map.of("username", username, "password", password, "nickname", nickname),
+                Map.of(
+                        "username", username,
+                        "password", password,
+                        "nickname", nickname,
+                        "captchaId", registerCaptcha.captchaId(),
+                        "captchaCode", registerCaptcha.captchaCode()
+                ),
                 null);
         assertOk(register);
         Long userId = register.path("data").path("userId").asLong();
         Assertions.assertTrue(userId > 0);
 
+        CaptchaData loginCaptcha = fetchCaptcha();
         JsonNode login = postJson("/api/v1/auth/login",
-                Map.of("username", username, "password", password),
+                Map.of(
+                        "username", username,
+                        "password", password,
+                        "captchaId", loginCaptcha.captchaId(),
+                        "captchaCode", loginCaptcha.captchaCode()
+                ),
                 null);
         assertOk(login);
 
@@ -69,6 +86,24 @@ public abstract class SupportApiTest {
         Assertions.assertFalse(refreshToken.isBlank());
 
         return new Session(username, password, userId, accessToken, refreshToken);
+    }
+
+    protected CaptchaData fetchCaptcha() throws Exception {
+        JsonNode captcha = getJson("/api/v1/auth/captcha", null);
+        assertOk(captcha);
+        String captchaId = captcha.path("data").path("captchaId").asText();
+        String captchaSvg = captcha.path("data").path("captchaSvg").asText();
+        Assertions.assertFalse(captchaId.isBlank());
+        StringBuilder code = new StringBuilder();
+        Matcher matcher = CAPTCHA_TEXT_PATTERN.matcher(captchaSvg);
+        while (matcher.find()) {
+            code.append(matcher.group(1));
+        }
+        Assertions.assertTrue(code.length() >= 4, "captcha svg does not contain enough text chars");
+        return new CaptchaData(captchaId, code.toString());
+    }
+
+    protected record CaptchaData(String captchaId, String captchaCode) {
     }
 
     /**
