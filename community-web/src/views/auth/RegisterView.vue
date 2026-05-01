@@ -50,7 +50,9 @@
           <a-form-item field="captchaCode" label="图形验证码">
             <div class="auth-card__captcha-row">
               <a-input v-model="form.captchaCode" placeholder="请输入验证码" allow-clear />
-              <button class="auth-card__captcha-image" type="button" @click="loadCaptcha" v-html="captchaSvg"></button>
+              <button class="auth-card__captcha-image" type="button" @click="loadCaptcha">
+                <img v-if="captchaImage" :src="captchaImage" alt="captcha" />
+              </button>
               <a-button type="outline" @click="loadCaptcha">换一张</a-button>
             </div>
           </a-form-item>
@@ -77,7 +79,7 @@
 
 const router = useRouter()
 const submitting = ref(false)
-const captchaSvg = ref('')
+const captchaImage = ref('')
 const form = reactive({
   username: '',
   nickname: '',
@@ -91,7 +93,7 @@ async function loadCaptcha() {
     const result = await fetchCaptcha()
     form.captchaId = result.captchaId
     form.captchaCode = ''
-    captchaSvg.value = result.captchaSvg
+    captchaImage.value = result.captchaImageBase64
   } catch (error) {
     Message.error(error instanceof Error ? error.message : '验证码加载失败')
   }
@@ -264,7 +266,7 @@ onMounted(() => {
   border-radius: 10px;
 }
 
-.auth-card__captcha-image :deep(svg) {
+.auth-card__captcha-image img {
   width: 132px;
   height: 44px;
   display: block;

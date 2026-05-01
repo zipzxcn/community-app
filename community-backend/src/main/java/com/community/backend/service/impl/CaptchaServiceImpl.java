@@ -10,6 +10,7 @@ import org.springframework.util.StringUtils;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -34,7 +35,7 @@ public class CaptchaServiceImpl implements CaptchaService {
 
         AuthCaptchaVo vo = new AuthCaptchaVo();
         vo.setCaptchaId(captchaId);
-        vo.setCaptchaSvg(buildSvg(code));
+        vo.setCaptchaImageBase64(buildSvgBase64(code));
         vo.setExpireInSeconds(expireSeconds);
         return vo;
     }
@@ -65,6 +66,11 @@ public class CaptchaServiceImpl implements CaptchaService {
             builder.append(CAPTCHA_CHARS[random.nextInt(CAPTCHA_CHARS.length)]);
         }
         return builder.toString();
+    }
+
+    private String buildSvgBase64(String code) {
+        String svg = buildSvg(code);
+        return "data:image/svg+xml;base64," + Base64.getEncoder().encodeToString(svg.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     private String buildSvg(String code) {

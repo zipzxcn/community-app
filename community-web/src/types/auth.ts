@@ -17,7 +17,7 @@ export interface RegisterPayload {
 
 export interface AuthCaptcha {
   captchaId: string
-  captchaSvg: string
+  captchaImageBase64: string
   expireInSeconds: number
 }
 

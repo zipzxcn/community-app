@@ -6,6 +6,6 @@ import lombok.Data;
 public class AuthCaptchaVo {
 
     private String captchaId;
-    private String captchaSvg;
+    private String captchaImageBase64;
     private Long expireInSeconds;
 }

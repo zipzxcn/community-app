@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -92,8 +93,13 @@ public abstract class SupportApiTest {
         JsonNode captcha = getJson("/api/v1/auth/captcha", null);
         assertOk(captcha);
         String captchaId = captcha.path("data").path("captchaId").asText();
-        String captchaSvg = captcha.path("data").path("captchaSvg").asText();
+        String captchaImageBase64 = captcha.path("data").path("captchaImageBase64").asText();
         Assertions.assertFalse(captchaId.isBlank());
+        Assertions.assertTrue(captchaImageBase64.startsWith("data:image/svg+xml;base64,"));
+        String captchaSvg = new String(
+                Base64.getDecoder().decode(captchaImageBase64.substring("data:image/svg+xml;base64,".length())),
+                StandardCharsets.UTF_8
+        );
         StringBuilder code = new StringBuilder();
         Matcher matcher = CAPTCHA_TEXT_PATTERN.matcher(captchaSvg);
         while (matcher.find()) {
