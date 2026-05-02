@@ -3,7 +3,10 @@
     <a-spin :loading="false">
       <article v-if="post" class="post-detail__article app-panel">
         <div class="post-detail__topbar">
-          <RouterLink class="post-detail__back" to="/">返回帖子流</RouterLink>
+          <RouterLink class="post-detail__back" :to="backToFeed">
+            <icon-left />
+            <span>返回帖子流</span>
+          </RouterLink>
           <div class="post-detail__topbar-actions">
             <a-tag v-if="post.status === 'HIDDEN'" color="orange">已下架</a-tag>
             <a-tag v-if="post.allowComment === 0" color="red">评论已关闭</a-tag>
@@ -183,7 +186,8 @@
  */
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
-import { useRouter } from 'vue-router'
+import { IconLeft } from '@arco-design/web-vue/es/icon'
+import { useRoute, useRouter } from 'vue-router'
 import CommentItem from '@/components/comment/CommentItem.vue'
 import { createComment, deleteComment, fetchPostComments, likeComment, replyComment, unlikeComment } from '@/api/comment'
 import { recordHistory } from '@/api/history'
@@ -191,6 +195,7 @@ import { deletePost, favoritePost, fetchPostDetail, hidePost, likePost, unfavori
 import { useAuthStore } from '@/stores/auth'
 import type { CommentItem as CommentItemType } from '@/types/comment'
 import type { PostDetail } from '@/types/post'
+import { buildFeedRouteQuery, parseFeedRouteQuery } from '@/utils/feed'
 import { formatDateTime, resolveAssetUrl } from '@/utils/format'
 import { renderMarkdown } from '@/utils/markdown'
 
@@ -199,6 +204,7 @@ const props = defineProps<{
 }>()
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const loading = ref(false)
 const commentsLoading = ref(false)
@@ -222,6 +228,13 @@ const isOwner = computed(() => Boolean(post.value && authStore.userInfo?.id === 
 const canReplyComment = computed(() => authStore.isLoggedIn && post.value?.allowComment !== 0)
 const contentHtml = computed(() => renderMarkdown(post.value?.contentMd))
 const displayInitial = computed(() => (post.value?.author?.nickname || post.value?.author?.username || '匿').slice(0, 1).toUpperCase())
+const backToFeed = computed(() => ({
+  name: 'home',
+  query: buildFeedRouteQuery({
+    ...parseFeedRouteQuery(route.query),
+    restoreFeed: true,
+  }),
+}))
 
 // 教学点：把“未登录时弹确认框并跳登录页”的逻辑抽成公共函数，避免每个互动按钮重复写一遍。
 function requireLogin() {
@@ -518,9 +531,29 @@ watch(
 }
 
 .post-detail__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
   color: var(--app-primary);
+  font-size: 14px;
   font-weight: 700;
   text-decoration: none;
+  background: rgba(236, 253, 245, 0.96);
+  border: 1px solid rgba(15, 118, 110, 0.14);
+  border-radius: var(--app-radius-pill);
+  box-shadow: 0 10px 24px rgba(15, 118, 110, 0.08);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.post-detail__back:hover {
+  transform: translateY(-1px);
+  border-color: rgba(15, 118, 110, 0.22);
+  box-shadow: 0 14px 28px rgba(15, 118, 110, 0.12);
 }
 
 .post-detail__hero {

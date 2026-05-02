@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -72,6 +73,15 @@ public class PostController {
     public ApiResponse<PostDetailVo> detail(@PathVariable Long postId) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         return ApiResponse.success(postService.detail(postId, currentUserId));
+    }
+
+    /**
+     * 首页推荐：登录用户走个性化推荐，未登录用户退化为热门帖子。
+     */
+    @GetMapping("/recommend")
+    public ApiResponse<List<PostListItemVo>> recommend(@RequestParam(defaultValue = "6") Integer size) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        return ApiResponse.success(postService.recommend(currentUserId, size));
     }
 
     /**

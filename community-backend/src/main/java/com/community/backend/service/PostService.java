@@ -18,6 +18,8 @@ public interface PostService {
 
     PostDetailVo detail(Long postId, Long currentUserId);
 
+    List<PostListItemVo> recommend(Long currentUserId, Integer size);
+
     void like(Long currentUserId, Long postId);
 
     void unlike(Long currentUserId, Long postId);

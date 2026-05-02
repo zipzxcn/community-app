@@ -1,6 +1,6 @@
 <template>
   <article class="post-card">
-    <RouterLink class="post-card__main" :to="`/posts/${post.id}`">
+    <RouterLink class="post-card__main" :to="postLink">
       <div class="post-card__content">
         <div class="post-card__top">
           <div class="post-card__author">
@@ -55,15 +55,30 @@
  */
 import { computed } from 'vue'
 import { IconEye, IconMessage, IconStar, IconThumbUp } from '@arco-design/web-vue/es/icon'
+import { useRoute } from 'vue-router'
 import type { PostListItem } from '@/types/post'
 import { compactNumber, formatDateTime, resolveAssetUrl } from '@/utils/format'
+import { buildFeedRouteQuery, parseFeedRouteQuery } from '@/utils/feed'
 
 const props = defineProps<{
   post: PostListItem
 }>()
 
+const route = useRoute()
+
 // 作者头像缺失时退化为首字母占位，减少因为缺少资源导致的版面空洞。
 const displayInitial = computed(() => (props.post.author?.nickname || props.post.author?.username || '匿').slice(0, 1).toUpperCase())
+const postLink = computed(() => {
+  if (route.name !== 'home') {
+    return `/posts/${props.post.id}`
+  }
+  const feedState = parseFeedRouteQuery(route.query)
+  return {
+    name: 'post-detail',
+    params: { postId: props.post.id },
+    query: buildFeedRouteQuery(feedState),
+  }
+})
 </script>
 
 <style scoped lang="scss">

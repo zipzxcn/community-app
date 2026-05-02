@@ -73,4 +73,8 @@ public class PostListItemVo {
      * 当前登录用户是否已收藏。
      */
     private Boolean favorited;
+    /**
+     * 推荐理由，推荐场景可选返回。
+     */
+    private String recommendReason;
 }

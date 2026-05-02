@@ -36,3 +36,4 @@ build/
 /community-backend/src/main/resources/mapper/application-prod.yml
 *.docx
 /docs/**
+/deploy/**

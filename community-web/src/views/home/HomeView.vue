@@ -125,6 +125,43 @@
 
       <aside class="home-view__sidebar">
         <section class="app-panel home-view__side-card">
+          <div class="home-view__side-head">
+            <div>
+              <p class="home-view__section-eyebrow">为你推荐</p>
+              <h3>{{ authStore.isLoggedIn ? '基于你的浏览与互动' : '当前热门内容' }}</h3>
+            </div>
+            <span>{{ recommendPosts.length }}</span>
+          </div>
+          <div v-if="recommendLoading" class="home-view__recommend-list">
+            <div v-for="index in 3" :key="index" class="home-view__recommend-skeleton">
+              <div class="app-skeleton app-skeleton--title"></div>
+              <div class="app-skeleton app-skeleton--text-short"></div>
+              <div class="app-skeleton app-skeleton--text"></div>
+            </div>
+          </div>
+          <div v-else-if="recommendPosts.length" class="home-view__recommend-list">
+            <RouterLink
+              v-for="item in recommendPosts"
+              :key="item.id"
+              :to="{
+                name: 'post-detail',
+                params: { postId: item.id },
+                query: buildFeedRouteQuery({ ...query, page: page.page, size: page.size }),
+              }"
+              class="home-view__recommend-item"
+            >
+              <strong>{{ item.title }}</strong>
+              <span>{{ item.recommendReason || (authStore.isLoggedIn ? '根据你的兴趣推荐' : '当前热门内容') }}</span>
+              <small>
+                {{ item.author?.nickname || item.author?.username || '匿名用户' }} ·
+                {{ item.likeCount || 0 }} 赞 · {{ item.commentCount || 0 }} 评
+              </small>
+            </RouterLink>
+          </div>
+          <p v-else class="home-view__side-empty">推荐内容生成中，稍后再看看。</p>
+        </section>
+
+        <section class="app-panel home-view__side-card">
           <p class="home-view__section-eyebrow">快速开始</p>
           <h3>让你的内容被看见</h3>
           <p>优先完成发帖、找人、进入个人中心这三件事，就能最快体验当前社区主流程。</p>
@@ -206,7 +243,7 @@
 /**
  * 首页：社区内容流入口，承载列表筛选、内容发现与快捷互动。
  */
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import {
   IconCalendar,
@@ -217,14 +254,20 @@ import {
   IconSearch,
   IconUser,
 } from '@arco-design/web-vue/es/icon'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import PostCard from '@/components/post/PostCard.vue'
-import { fetchPosts, fetchTags } from '@/api/post'
+import { fetchPosts, fetchRecommendPosts, fetchTags } from '@/api/post'
 import { useAuthStore } from '@/stores/auth'
 import type { PostListItem, PostQuery, Tag } from '@/types/post'
+import { buildFeedRouteQuery, clearFeedScroll, loadFeedScroll, parseFeedRouteQuery, saveFeedScroll } from '@/utils/feed'
 
 const authStore = useAuthStore()
+const route = useRoute()
+const router = useRouter()
 const loading = ref(false)
+const recommendLoading = ref(false)
 const posts = ref<PostListItem[]>([])
+const recommendPosts = ref<PostListItem[]>([])
 const tagList = ref<Tag[]>([])
 const query = reactive<PostQuery>({
   page: 1,
@@ -263,6 +306,18 @@ async function loadPosts() {
   }
 }
 
+async function loadRecommend() {
+  recommendLoading.value = true
+  try {
+    recommendPosts.value = await fetchRecommendPosts(6)
+  } catch (error) {
+    recommendPosts.value = []
+    Message.error(error instanceof Error ? error.message : '推荐内容加载失败')
+  } finally {
+    recommendLoading.value = false
+  }
+}
+
 async function loadTags() {
   try {
     tagList.value = await fetchTags()
@@ -272,23 +327,90 @@ async function loadTags() {
 }
 
 function reload() {
-  query.page = 1
-  loadPosts()
+  updateFeedRoute({
+    ...query,
+    page: 1,
+  })
 }
 
 // 分页切换时只修改页码，再复用同一套加载逻辑，避免数据请求分散。
 function changePage(current: number) {
-  query.page = current
-  loadPosts()
+  updateFeedRoute({
+    ...query,
+    page: current,
+  })
 }
 
 function selectTag(tagId: number) {
-  query.tagId = query.tagId === tagId ? undefined : tagId
-  reload()
+  updateFeedRoute({
+    ...query,
+    page: 1,
+    tagId: query.tagId === tagId ? undefined : tagId,
+  })
 }
 
+function syncQueryFromRoute() {
+  const parsed = parseFeedRouteQuery(route.query)
+  query.page = parsed.page
+  query.size = parsed.size
+  query.sort = parsed.sort
+  query.keyword = parsed.keyword
+  query.tagId = parsed.tagId
+}
+
+function updateFeedRoute(nextQuery: Partial<PostQuery>, options: { restoreFeed?: boolean } = {}) {
+  router.replace({
+    name: 'home',
+    query: buildFeedRouteQuery({
+      page: nextQuery.page ?? 1,
+      size: nextQuery.size ?? query.size ?? 10,
+      sort: nextQuery.sort ?? query.sort ?? 'latest',
+      keyword: nextQuery.keyword ?? query.keyword ?? '',
+      tagId: nextQuery.tagId,
+      restoreFeed: options.restoreFeed,
+    }),
+  })
+}
+
+async function restoreFeedScrollIfNeeded() {
+  const restoreFeed = (Array.isArray(route.query.restoreFeed) ? route.query.restoreFeed[0] : route.query.restoreFeed) === '1'
+  if (!restoreFeed) {
+    return
+  }
+  const scrollY = loadFeedScroll(parseFeedRouteQuery(route.query))
+  if (scrollY === null) {
+    return
+  }
+  await nextTick()
+  window.scrollTo({ top: scrollY, behavior: 'auto' })
+  clearFeedScroll()
+}
+
+onBeforeRouteLeave((to) => {
+  if (to.name === 'post-detail') {
+    saveFeedScroll(parseFeedRouteQuery(route.query), window.scrollY)
+  }
+})
+
+watch(
+  () => route.fullPath,
+  async () => {
+    syncQueryFromRoute()
+    await Promise.all([loadPosts(), loadRecommend()])
+    await restoreFeedScrollIfNeeded()
+  },
+  { immediate: true },
+)
+
+watch(
+  () => authStore.isLoggedIn,
+  async () => {
+    await loadRecommend()
+  },
+)
+
 onMounted(async () => {
-  await Promise.all([loadTags(), loadPosts()])
+  await loadTags()
 })
 </script>
 
@@ -441,6 +563,57 @@ onMounted(async () => {
 .home-view__side-actions {
   display: grid;
   gap: 10px;
+}
+
+.home-view__recommend-list {
+  display: grid;
+  gap: 10px;
+}
+
+.home-view__recommend-item,
+.home-view__recommend-skeleton {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  background: rgba(248, 250, 252, 0.9);
+  border: 1px solid var(--app-border-color-soft);
+  border-radius: var(--app-radius-md);
+}
+
+.home-view__recommend-item {
+  color: inherit;
+  text-decoration: none;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.home-view__recommend-item:hover {
+  transform: translateY(-1px);
+  border-color: rgba(15, 118, 110, 0.18);
+  box-shadow: var(--app-shadow-xs);
+}
+
+.home-view__recommend-item strong {
+  color: var(--app-text-1);
+  line-height: 1.5;
+}
+
+.home-view__recommend-item span,
+.home-view__recommend-item small {
+  color: var(--app-text-3);
+  line-height: 1.6;
+}
+
+.home-view__recommend-item span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--app-primary);
+}
+
+.home-view__recommend-item small {
+  font-size: 12px;
 }
 
 .home-view__tag-cloud {

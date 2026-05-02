@@ -20,6 +20,13 @@ export function fetchPostDetail(postId: number) {
 }
 
 /**
+ * fetchRecommendPosts：首页推荐，登录用户走个性化推荐，游客退化为热门内容。
+ */
+export function fetchRecommendPosts(size = 6) {
+  return client.get<never, PostListItem[]>('/posts/recommend', { params: { size } })
+}
+
+/**
  * createPost：按函数名对应后端接口完成请求封装。
  */
 export function createPost(payload: CreatePostPayload) {

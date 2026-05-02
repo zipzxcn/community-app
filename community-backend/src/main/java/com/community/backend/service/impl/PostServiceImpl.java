@@ -18,6 +18,7 @@ import com.community.backend.entity.PostFavorite;
 import com.community.backend.entity.PostLike;
 import com.community.backend.entity.PostTagRel;
 import com.community.backend.entity.Tag;
+import com.community.backend.entity.UserBrowseHistory;
 import com.community.backend.entity.UserFollow;
 import com.community.backend.mapper.AppUserMapper;
 import com.community.backend.mapper.FileObjectMapper;
@@ -26,6 +27,7 @@ import com.community.backend.mapper.PostLikeMapper;
 import com.community.backend.mapper.PostMapper;
 import com.community.backend.mapper.PostTagRelMapper;
 import com.community.backend.mapper.TagMapper;
+import com.community.backend.mapper.UserBrowseHistoryMapper;
 import com.community.backend.mapper.UserFollowMapper;
 import com.community.backend.service.NotificationService;
 import com.community.backend.service.PostService;
@@ -41,7 +43,9 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -69,6 +73,7 @@ public class PostServiceImpl implements PostService {
     private final PostFavoriteMapper postFavoriteMapper;
     private final FileObjectMapper fileObjectMapper;
     private final NotificationService notificationService;
+    private final UserBrowseHistoryMapper userBrowseHistoryMapper;
     private final UserFollowMapper userFollowMapper;
 
     public PostServiceImpl(PostMapper postMapper,
@@ -79,6 +84,7 @@ public class PostServiceImpl implements PostService {
                             PostFavoriteMapper postFavoriteMapper,
                             FileObjectMapper fileObjectMapper,
                             NotificationService notificationService,
+                            UserBrowseHistoryMapper userBrowseHistoryMapper,
                             UserFollowMapper userFollowMapper) {
         this.postMapper = postMapper;
         this.tagMapper = tagMapper;
@@ -88,6 +94,7 @@ public class PostServiceImpl implements PostService {
         this.postFavoriteMapper = postFavoriteMapper;
         this.fileObjectMapper = fileObjectMapper;
         this.notificationService = notificationService;
+        this.userBrowseHistoryMapper = userBrowseHistoryMapper;
         this.userFollowMapper = userFollowMapper;
     }
 
@@ -283,6 +290,71 @@ public class PostServiceImpl implements PostService {
         vo.setLiked(loadLikedPostSet(currentUserId, List.of(postId)).contains(postId));
         vo.setFavorited(loadFavoritedPostSet(currentUserId, List.of(postId)).contains(postId));
         return vo;
+    }
+
+    /**
+     * 首页推荐：
+     * - 登录用户优先综合浏览历史、点赞/收藏标签、关注作者做个性化推荐
+     * - 未登录用户或个性化信号不足时退化为热门帖子
+     */
+    @Override
+    public List<PostListItemVo> recommend(Long currentUserId, Integer size) {
+        int limit = Math.min(Math.max(size == null ? 6 : size, 3), 12);
+        if (currentUserId == null) {
+            return buildRecommendationVoList(loadTopHotPosts(limit), null, Collections.emptyMap());
+        }
+
+        List<Long> recentHistoryPostIds = loadRecentHistoryPostIds(currentUserId, 24);
+        Set<Long> recentHistorySet = new LinkedHashSet<>(recentHistoryPostIds);
+        Set<Long> interestTagIds = loadInterestTagIds(currentUserId, recentHistoryPostIds);
+        Set<Long> followedAuthorIds = loadFollowedAuthorIds(currentUserId);
+
+        Map<Long, Integer> scoreMap = new HashMap<>();
+        Map<Long, List<String>> reasonMap = new HashMap<>();
+
+        mergeRecommendationScore(
+                scoreMap,
+                reasonMap,
+                loadLatestPostsByAuthors(followedAuthorIds, currentUserId, 18),
+                60,
+                "你关注的作者更新了"
+        );
+        mergeRecommendationScore(
+                scoreMap,
+                reasonMap,
+                loadPostsByTagIds(interestTagIds, currentUserId, 36),
+                36,
+                "匹配你常看的标签"
+        );
+        mergeRecommendationScore(
+                scoreMap,
+                reasonMap,
+                loadTopHotPosts(18),
+                18,
+                "近期热门内容"
+        );
+
+        recentHistorySet.forEach(scoreMap::remove);
+
+        List<Long> rankedPostIds = scoreMap.entrySet().stream()
+                .sorted(Map.Entry.<Long, Integer>comparingByValue(Comparator.reverseOrder())
+                        .thenComparing(Map.Entry.comparingByKey(Comparator.reverseOrder())))
+                .map(Map.Entry::getKey)
+                .limit(limit)
+                .toList();
+
+        List<Post> rankedPosts = loadPublishedPostsByIds(rankedPostIds);
+        if (rankedPosts.size() < limit) {
+            Set<Long> excludeIds = new HashSet<>(recentHistorySet);
+            excludeIds.addAll(rankedPostIds);
+            List<Post> hotFallback = loadTopHotPosts(limit * 3).stream()
+                    .filter(post -> !excludeIds.contains(post.getId()))
+                    .limit(limit - rankedPosts.size())
+                    .toList();
+            rankedPosts = new ArrayList<>(rankedPosts);
+            rankedPosts.addAll(hotFallback);
+        }
+        return buildRecommendationVoList(rankedPosts, currentUserId, reasonMap);
     }
 
     /**
@@ -491,6 +563,194 @@ public class PostServiceImpl implements PostService {
                     vo.setName(tag.getName());
                     return vo;
                 })
+                .toList();
+    }
+
+    private List<PostListItemVo> buildRecommendationVoList(List<Post> posts,
+                                                           Long currentUserId,
+                                                           Map<Long, List<String>> reasonMap) {
+        if (CollectionUtils.isEmpty(posts)) {
+            return Collections.emptyList();
+        }
+        List<Long> postIds = posts.stream().map(Post::getId).toList();
+        Map<Long, UserSummaryVo> authorMap = loadAuthorMap(posts.stream().map(Post::getAuthorId).toList());
+        Map<Long, List<TagVo>> tagMap = loadTagMapByPostIds(postIds);
+        Set<Long> likedSet = loadLikedPostSet(currentUserId, postIds);
+        Set<Long> favoritedSet = loadFavoritedPostSet(currentUserId, postIds);
+
+        return posts.stream().map(post -> {
+            PostListItemVo vo = new PostListItemVo();
+            vo.setId(post.getId());
+            vo.setTitle(post.getTitle());
+            vo.setExcerpt(post.getExcerpt());
+            vo.setCoverUrl(post.getCoverUrl());
+            vo.setStatus(post.getStatus());
+            vo.setViewCount(post.getViewCount());
+            vo.setLikeCount(post.getLikeCount());
+            vo.setFavoriteCount(post.getFavoriteCount());
+            vo.setCommentCount(post.getCommentCount());
+            vo.setPublishedAt(post.getPublishedAt());
+            vo.setAuthor(authorMap.get(post.getAuthorId()));
+            vo.setTags(tagMap.getOrDefault(post.getId(), Collections.emptyList()));
+            vo.setAttachmentFiles(loadAttachmentFiles(post.getId()));
+            vo.setLiked(likedSet.contains(post.getId()));
+            vo.setFavorited(favoritedSet.contains(post.getId()));
+            List<String> reasons = reasonMap.get(post.getId());
+            vo.setRecommendReason(CollectionUtils.isEmpty(reasons) ? "近期热门内容" : reasons.get(0));
+            return vo;
+        }).toList();
+    }
+
+    private void mergeRecommendationScore(Map<Long, Integer> scoreMap,
+                                          Map<Long, List<String>> reasonMap,
+                                          List<Post> posts,
+                                          int baseScore,
+                                          String reason) {
+        if (CollectionUtils.isEmpty(posts)) {
+            return;
+        }
+        for (Post post : posts) {
+            int popularityScore = (post.getLikeCount() == null ? 0 : post.getLikeCount()) * 3
+                    + (post.getFavoriteCount() == null ? 0 : post.getFavoriteCount()) * 4
+                    + (post.getCommentCount() == null ? 0 : post.getCommentCount()) * 2
+                    + (post.getViewCount() == null ? 0 : post.getViewCount()) / 12;
+            int recencyBonus = 0;
+            if (post.getPublishedAt() != null) {
+                long recentHours = java.time.Duration.between(post.getPublishedAt(), LocalDateTime.now()).toHours();
+                if (recentHours <= 24) {
+                    recencyBonus = 12;
+                } else if (recentHours <= 72) {
+                    recencyBonus = 6;
+                }
+            }
+            scoreMap.merge(post.getId(), baseScore + popularityScore + recencyBonus, Integer::sum);
+            reasonMap.computeIfAbsent(post.getId(), key -> new ArrayList<>());
+            if (!reasonMap.get(post.getId()).contains(reason)) {
+                reasonMap.get(post.getId()).add(reason);
+            }
+        }
+    }
+
+    private List<Long> loadRecentHistoryPostIds(Long currentUserId, int limit) {
+        return loadActivePostIds(userBrowseHistoryMapper.selectList(new LambdaQueryWrapper<UserBrowseHistory>()
+                        .eq(UserBrowseHistory::getUserId, currentUserId)
+                        .orderByDesc(UserBrowseHistory::getLastViewedAt)
+                        .last("LIMIT " + limit))
+                .stream()
+                .map(UserBrowseHistory::getPostId)
+                .toList());
+    }
+
+    private Set<Long> loadInterestTagIds(Long currentUserId, List<Long> historyPostIds) {
+        Set<Long> sourcePostIds = new LinkedHashSet<>(historyPostIds);
+        sourcePostIds.addAll(loadActivePostIds(postLikeMapper.selectList(new LambdaQueryWrapper<PostLike>()
+                .eq(PostLike::getUserId, currentUserId)
+                .eq(PostLike::getStatus, "ACTIVE")
+                .orderByDesc(PostLike::getCreatedAt)
+                .last("LIMIT 12")).stream().map(PostLike::getPostId).toList()));
+        sourcePostIds.addAll(loadActivePostIds(postFavoriteMapper.selectList(new LambdaQueryWrapper<PostFavorite>()
+                .eq(PostFavorite::getUserId, currentUserId)
+                .eq(PostFavorite::getStatus, "ACTIVE")
+                .orderByDesc(PostFavorite::getCreatedAt)
+                .last("LIMIT 12")).stream().map(PostFavorite::getPostId).toList()));
+        if (sourcePostIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return postTagRelMapper.selectList(new LambdaQueryWrapper<PostTagRel>()
+                        .in(PostTagRel::getPostId, sourcePostIds))
+                .stream()
+                .map(PostTagRel::getTagId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private Set<Long> loadFollowedAuthorIds(Long currentUserId) {
+        return userFollowMapper.selectList(new LambdaQueryWrapper<UserFollow>()
+                        .eq(UserFollow::getFollowerId, currentUserId)
+                        .eq(UserFollow::getStatus, "ACTIVE")
+                        .orderByDesc(UserFollow::getFollowedAt)
+                        .last("LIMIT 20"))
+                .stream()
+                .map(UserFollow::getFolloweeId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private List<Long> loadActivePostIds(List<Long> postIds) {
+        if (CollectionUtils.isEmpty(postIds)) {
+            return Collections.emptyList();
+        }
+        return postMapper.selectList(new LambdaQueryWrapper<Post>()
+                        .in(Post::getId, postIds)
+                        .eq(Post::getIsDeleted, 0)
+                        .eq(Post::getStatus, "PUBLISHED"))
+                .stream()
+                .map(Post::getId)
+                .toList();
+    }
+
+    private List<Post> loadLatestPostsByAuthors(Set<Long> authorIds, Long currentUserId, int limit) {
+        if (CollectionUtils.isEmpty(authorIds)) {
+            return Collections.emptyList();
+        }
+        return postMapper.selectList(new LambdaQueryWrapper<Post>()
+                        .in(Post::getAuthorId, authorIds)
+                        .ne(currentUserId != null, Post::getAuthorId, currentUserId)
+                        .eq(Post::getIsDeleted, 0)
+                        .eq(Post::getStatus, "PUBLISHED")
+                        .orderByDesc(Post::getPublishedAt)
+                        .last("LIMIT " + limit));
+    }
+
+    private List<Post> loadPostsByTagIds(Set<Long> tagIds, Long currentUserId, int limit) {
+        if (CollectionUtils.isEmpty(tagIds)) {
+            return Collections.emptyList();
+        }
+        List<Long> postIds = postTagRelMapper.selectList(new LambdaQueryWrapper<PostTagRel>()
+                        .in(PostTagRel::getTagId, tagIds))
+                .stream()
+                .map(PostTagRel::getPostId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (postIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return postMapper.selectList(new LambdaQueryWrapper<Post>()
+                        .in(Post::getId, postIds)
+                        .ne(currentUserId != null, Post::getAuthorId, currentUserId)
+                        .eq(Post::getIsDeleted, 0)
+                        .eq(Post::getStatus, "PUBLISHED")
+                        .orderByDesc(Post::getPublishedAt)
+                        .last("LIMIT " + limit));
+    }
+
+    private List<Post> loadTopHotPosts(int limit) {
+        return postMapper.selectList(new LambdaQueryWrapper<Post>()
+                .eq(Post::getIsDeleted, 0)
+                .eq(Post::getStatus, "PUBLISHED")
+                .orderByDesc(Post::getLikeCount)
+                .orderByDesc(Post::getFavoriteCount)
+                .orderByDesc(Post::getCommentCount)
+                .orderByDesc(Post::getViewCount)
+                .orderByDesc(Post::getPublishedAt)
+                .last("LIMIT " + limit));
+    }
+
+    private List<Post> loadPublishedPostsByIds(List<Long> postIds) {
+        if (CollectionUtils.isEmpty(postIds)) {
+            return Collections.emptyList();
+        }
+        Map<Long, Integer> orderMap = new HashMap<>();
+        for (int index = 0; index < postIds.size(); index++) {
+            orderMap.put(postIds.get(index), index);
+        }
+        return postMapper.selectList(new LambdaQueryWrapper<Post>()
+                        .in(Post::getId, postIds)
+                        .eq(Post::getIsDeleted, 0)
+                        .eq(Post::getStatus, "PUBLISHED"))
+                .stream()
+                .sorted(Comparator.comparingInt(post -> orderMap.getOrDefault(post.getId(), Integer.MAX_VALUE)))
                 .toList();
     }
 

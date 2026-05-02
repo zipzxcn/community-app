@@ -26,6 +26,7 @@ export interface PostListItem {
   attachmentFiles: FileObject[]
   liked: boolean
   favorited: boolean
+  recommendReason?: string
 }
 
 // 详情页比列表项多正文、附件 ID、评论开关等字段。

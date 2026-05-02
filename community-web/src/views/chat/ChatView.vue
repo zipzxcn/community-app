@@ -738,9 +738,9 @@ onUnmounted(() => {
 }
 
 .chat-view__message-list {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
-  min-height: 520px;
   height: 100%;
   padding: 8px 4px;
   overflow-y: auto;
@@ -762,6 +762,7 @@ onUnmounted(() => {
 }
 
 .chat-view__message-bubble {
+  width: fit-content;
   min-width: 124px;
   max-width: min(86%, 760px);
   padding: 14px 16px;
@@ -785,6 +786,7 @@ onUnmounted(() => {
 .chat-view__message-bubble p {
   color: #172033;
   line-height: 1.7;
+  word-break: break-word;
   white-space: pre-wrap;
 }
 
@@ -823,7 +825,6 @@ onUnmounted(() => {
 
   .chat-view__message-list {
     height: 360px;
-    min-height: 360px;
   }
 }
 
