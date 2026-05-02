@@ -498,14 +498,9 @@ watch(
 </script>
 
 <style scoped lang="scss">
-.post-detail__article,
-.post-detail__comments {
-  padding-top: 0;
-}
-
 .post-detail__article :deep(.arco-card-body),
 .post-detail__comments :deep(.arco-card-body) {
-  padding: 0;
+  padding: 20px;
 }
 
 .post-detail__comments :deep(.arco-card-body),
@@ -528,6 +523,7 @@ watch(
 
 .post-detail__topbar {
   justify-content: space-between;
+  margin-bottom: 16px;
 }
 
 .post-detail__back {
@@ -554,6 +550,10 @@ watch(
   transform: translateY(-1px);
   border-color: rgba(15, 118, 110, 0.22);
   box-shadow: 0 14px 28px rgba(15, 118, 110, 0.12);
+}
+
+.post-detail__comments :deep(.app-section-head) {
+  margin-bottom: 18px;
 }
 
 .post-detail__hero {
@@ -620,6 +620,11 @@ watch(
 .post-detail__hero-side {
   display: grid;
   gap: 12px;
+}
+
+.post-detail__tags {
+  margin-top: 14px;
+  gap: 8px;
 }
 
 .post-detail__cover {

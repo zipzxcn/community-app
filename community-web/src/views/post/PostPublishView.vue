@@ -552,20 +552,14 @@ onBeforeUnmount(() => {
   align-items: start;
 }
 
-.post-publish__editor,
-.post-publish__preview {
-  padding-top: 0;
-}
-
 .post-publish__editor :deep(.arco-card-body),
 .post-publish__preview :deep(.arco-card-body) {
-  padding: 0;
+  padding: 20px;
 }
 
 .post-publish__form {
   display: grid;
   gap: 8px;
-  margin-top: 18px;
 }
 
 .post-publish__row {
@@ -723,11 +717,17 @@ onBeforeUnmount(() => {
 }
 
 .post-publish__preview-body {
-  margin-top: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.post-publish__editor :deep(.app-section-head),
+.post-publish__preview :deep(.app-section-head) {
+  margin-bottom: 18px;
 }
 
 .post-publish__preview h2 {
-  margin: 16px 0 12px;
+  margin: 0;
   color: var(--app-text-1);
   font-size: 28px;
 }

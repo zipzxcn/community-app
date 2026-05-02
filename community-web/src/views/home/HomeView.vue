@@ -161,7 +161,7 @@
           <p v-else class="home-view__side-empty">推荐内容生成中，稍后再看看。</p>
         </section>
 
-        <section class="app-panel home-view__side-card">
+        <section class="app-panel home-view__side-card home-view__quickstart-card">
           <p class="home-view__section-eyebrow">快速开始</p>
           <h3>让你的内容被看见</h3>
           <p>优先完成发帖、找人、进入个人中心这三件事，就能最快体验当前社区主流程。</p>
@@ -563,6 +563,37 @@ onMounted(async () => {
 .home-view__side-actions {
   display: grid;
   gap: 10px;
+}
+
+.home-view__quickstart-card {
+  gap: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.92));
+}
+
+.home-view__quickstart-card h3 {
+  margin: 4px 0 0;
+  color: var(--app-text-1);
+  font-size: 26px;
+  line-height: 1.2;
+}
+
+.home-view__quickstart-card p {
+  line-height: 1.85;
+}
+
+.home-view__quickstart-card .home-view__side-actions {
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.home-view__quickstart-card .home-view__side-actions :deep(.arco-btn) {
+  min-height: 42px;
+  font-weight: 700;
+}
+
+.home-view__quickstart-card .home-view__side-actions :deep(.arco-btn-primary) {
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.18);
 }
 
 .home-view__recommend-list {
