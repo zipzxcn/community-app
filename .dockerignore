@@ -1,0 +1,14 @@
+.git
+.idea
+*.iml
+
+**/node_modules
+**/.DS_Store
+
+docs
+deploy
+
+community-backend/target/*
+!community-backend/target/community-backend-0.0.1-SNAPSHOT.jar
+
+community-web/dist/**/*.map

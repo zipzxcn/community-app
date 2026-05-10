@@ -1,0 +1,125 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: community-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-community_root_password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-community_app}
+      TZ: ${TZ:-Asia/Shanghai}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+08:00
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - community_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    container_name: community-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-community_minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-community_minio_password}
+      TZ: ${TZ:-Asia/Shanghai}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - community_minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    container_name: community-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-community_minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-community_minio_password}
+      MINIO_BUCKET: ${MINIO_BUCKET:-community-prod}
+    volumes:
+      - ./minio-cors.json:/tmp/minio-cors.json:ro
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 \"$${MINIO_ROOT_USER}\" \"$${MINIO_ROOT_PASSWORD}\";
+      mc mb -p local/\"$${MINIO_BUCKET}\" || true;
+      mc cors set local/\"$${MINIO_BUCKET}\" /tmp/minio-cors.json || true;
+      echo 'MinIO bucket and CORS initialized.';
+      "
+    restart: "no"
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/backend.Dockerfile
+      args:
+        JAR_FILE: community-backend/target/community-backend-0.0.1-SNAPSHOT.jar
+    image: community-backend:0.0.1
+    container_name: community-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: 8080
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-community_app}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-community_root_password}
+      SPRING_FLYWAY_ENABLED: "true"
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
+      SPRING_FLYWAY_BASELINE_VERSION: "0"
+      APP_SECURITY_JWT_SECRET: ${APP_JWT_SECRET:-change-this-secret-change-this-secret}
+      APP_SECURITY_JWT_ACCESS_TOKEN_EXPIRE_SECONDS: ${APP_JWT_ACCESS_TOKEN_EXPIRE_SECONDS:-7200}
+      APP_SECURITY_JWT_REFRESH_TOKEN_EXPIRE_SECONDS: ${APP_JWT_REFRESH_TOKEN_EXPIRE_SECONDS:-1209600}
+      APP_STORAGE_PROVIDER: minio
+      APP_STORAGE_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-http://host.docker.internal:9000}
+      APP_STORAGE_ACCESS_KEY: ${MINIO_ROOT_USER:-community_minio}
+      APP_STORAGE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-community_minio_password}
+      APP_STORAGE_BUCKET: ${MINIO_BUCKET:-community-prod}
+      APP_STORAGE_UPLOAD_EXPIRE_SECONDS: ${APP_STORAGE_UPLOAD_EXPIRE_SECONDS:-900}
+      APP_CORS_ALLOWED_ORIGINS_0: http://localhost:${FRONTEND_PORT:-8088}
+      APP_CORS_ALLOWED_ORIGINS_1: http://127.0.0.1:${FRONTEND_PORT:-8088}
+      APP_HISTORY_CLEANUP_ENABLED: ${APP_HISTORY_CLEANUP_ENABLED:-true}
+      APP_HISTORY_CLEANUP_RETENTION_DAYS: ${APP_HISTORY_CLEANUP_RETENTION_DAYS:-180}
+      APP_HISTORY_CLEANUP_CRON: ${APP_HISTORY_CLEANUP_CRON:-0 15 3 * * *}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/frontend.Dockerfile
+    image: community-frontend:0.0.1
+    container_name: community-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "${FRONTEND_PORT:-8088}:80"
+
+volumes:
+  community_mysql_data:
+  community_minio_data:
