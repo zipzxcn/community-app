@@ -97,7 +97,7 @@
       </div>
     </header>
 
-    <main class="default-layout__main">
+    <main :class="['default-layout__main', { 'default-layout__main--compose': isComposeRoute }]">
       <RouterView />
     </main>
 
@@ -145,13 +145,14 @@ import {
   IconSearch,
   IconUser,
 } from '@arco-design/web-vue/es/icon'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useChatStore } from '@/stores/chat'
 import { useNotificationStore } from '@/stores/notification'
 import { resolveAssetUrl } from '@/utils/format'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const chatStore = useChatStore()
 const notificationStore = useNotificationStore()
@@ -166,6 +167,8 @@ const unreadSummary = computed(() => {
 const displayInitial = computed(() =>
   (authStore.userInfo?.nickname || authStore.userInfo?.username || 'C').slice(0, 1).toUpperCase(),
 )
+
+const isComposeRoute = computed(() => route.name === 'post-publish' || route.name === 'post-edit')
 
 const primaryNav = computed(() => {
   const items = [
@@ -483,9 +486,14 @@ onMounted(async () => {
 }
 
 .default-layout__main {
+  width: 100%;
   max-width: var(--app-page-width);
   margin: 0 auto;
   padding: 28px 24px 20px;
+}
+
+.default-layout__main--compose {
+  max-width: min(1760px, calc(100vw - 48px));
 }
 
 .default-layout__footer {

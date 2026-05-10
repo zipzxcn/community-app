@@ -1,5 +1,5 @@
 <template>
-  <section class="post-publish app-page">
+  <section class="post-publish app-page" :class="`post-publish--${workspaceMode}`">
     <div class="post-publish__header app-hero">
       <div class="post-publish__header-main">
         <p class="post-publish__eyebrow">Compose Workspace</p>
@@ -48,8 +48,21 @@
       </div>
     </div>
 
-    <div class="post-publish__grid">
-      <a-card class="post-publish__editor app-panel" :bordered="false">
+    <div class="post-publish__mode-bar app-panel">
+      <div>
+        <p class="post-publish__eyebrow">Workspace View</p>
+        <strong>写作视图</strong>
+        <span>默认双栏写作，也可以切换为专注编辑或完整预览。</span>
+      </div>
+      <div class="post-publish__mode-actions">
+        <a-button size="small" :type="workspaceMode === 'split' ? 'primary' : 'secondary'" @click="workspaceMode = 'split'">左右双栏</a-button>
+        <a-button size="small" :type="workspaceMode === 'edit' ? 'primary' : 'secondary'" @click="workspaceMode = 'edit'">专注编辑</a-button>
+        <a-button size="small" :type="workspaceMode === 'preview' ? 'primary' : 'secondary'" @click="workspaceMode = 'preview'">全屏预览</a-button>
+      </div>
+    </div>
+
+    <div class="post-publish__grid" :class="`post-publish__grid--${workspaceMode}`">
+      <a-card v-if="showEditor" class="post-publish__editor app-panel" :bordered="false">
         <div class="app-section-head">
           <div class="app-section-head__main">
             <p class="app-section-head__eyebrow">Editor</p>
@@ -145,9 +158,10 @@
             </div>
             <a-textarea
               ref="editorRef"
+              class="post-publish__textarea"
               v-model="form.contentMd"
               placeholder="支持完整 Markdown：标题、段落、列表、任务列表、表格、引用、代码块、图片和链接。"
-              :auto-size="{ minRows: 18, maxRows: 30 }"
+              :auto-size="{ minRows: workspaceMode === 'edit' ? 34 : 28, maxRows: 56 }"
               @click="rememberEditorSelection"
               @keyup="rememberEditorSelection"
               @mouseup="rememberEditorSelection"
@@ -167,7 +181,7 @@
         </div>
       </a-card>
 
-      <a-card class="post-publish__preview app-panel" :bordered="false">
+      <a-card v-if="showPreview" class="post-publish__preview app-panel" :bordered="false">
         <div class="app-section-head">
           <div class="app-section-head__main">
             <p class="app-section-head__eyebrow">Preview</p>
@@ -222,6 +236,8 @@ const uploadingAttachments = ref(false)
 const saveStatus = ref('尚未保存')
 const availableTags = ref<Tag[]>([])
 const attachmentFiles = ref<FileObject[]>([])
+type WorkspaceMode = 'split' | 'edit' | 'preview'
+const workspaceMode = ref<WorkspaceMode>('split')
 // 教学点：表单状态集中放在一个 reactive 对象里，方便草稿保存、发布提交、预览渲染共用同一份数据源。
 const form = reactive({
   title: '',
@@ -234,6 +250,8 @@ const lastEditorSelection = ref({ start: 0, end: 0 })
 let autosaveTimer: number | undefined
 
 const isEditMode = computed(() => Boolean(props.postId))
+const showEditor = computed(() => workspaceMode.value !== 'preview')
+const showPreview = computed(() => workspaceMode.value !== 'edit')
 // 教学点：预览区完全基于 form.contentMd 计算得到，做到“编辑区即数据源，预览区只是派生视图”。
 const previewHtml = computed(() => renderMarkdown(form.contentMd))
 const previewTags = computed(() => availableTags.value.filter((tag) => form.tagIds.includes(tag.id)))
@@ -657,6 +675,11 @@ onBeforeUnmount(() => {
   gap: 24px;
 }
 
+.post-publish {
+  width: min(100%, 1680px);
+  margin: 0 auto;
+}
+
 .post-publish__header-main {
   display: grid;
   gap: 18px;
@@ -705,14 +728,24 @@ onBeforeUnmount(() => {
 
 .post-publish__grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
-  gap: 18px;
+  grid-template-columns: minmax(0, 3fr) minmax(460px, 2fr);
+  gap: 22px;
   align-items: start;
+}
+
+.post-publish__grid--edit,
+.post-publish__grid--preview {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.post-publish--edit,
+.post-publish--preview {
+  max-width: 1320px;
 }
 
 .post-publish__editor :deep(.arco-card-body),
 .post-publish__preview :deep(.arco-card-body) {
-  padding: 20px;
+  padding: 24px;
 }
 
 .post-publish__form {
@@ -847,7 +880,53 @@ onBeforeUnmount(() => {
 }
 
 .post-publish__toolbar {
+  position: sticky;
+  top: 94px;
+  z-index: 5;
   margin-bottom: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--app-border-color-soft);
+  border-radius: 14px;
+  backdrop-filter: blur(14px);
+}
+
+.post-publish__textarea :deep(textarea) {
+  font-family: Consolas, Monaco, 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.post-publish__mode-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+}
+
+.post-publish__mode-bar strong,
+.post-publish__mode-bar span {
+  display: block;
+}
+
+.post-publish__mode-bar strong {
+  margin-top: 4px;
+  color: var(--app-text-1);
+  font-size: 18px;
+}
+
+.post-publish__mode-bar span {
+  margin-top: 4px;
+  color: var(--app-text-3);
+  font-size: 13px;
+}
+
+.post-publish__mode-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .post-publish__actions {
@@ -872,11 +951,20 @@ onBeforeUnmount(() => {
 .post-publish__preview {
   position: sticky;
   top: 120px;
+  min-width: 0;
+  max-height: calc(100vh - 148px);
+  overflow: auto;
+}
+
+.post-publish__grid--preview .post-publish__preview {
+  position: static;
+  max-height: none;
 }
 
 .post-publish__preview-body {
   display: grid;
   gap: 14px;
+  min-width: 0;
 }
 
 .post-publish__editor :deep(.app-section-head),
@@ -888,6 +976,7 @@ onBeforeUnmount(() => {
   margin: 0;
   color: var(--app-text-1);
   font-size: 28px;
+  overflow-wrap: anywhere;
 }
 
 .post-publish__preview-tags {
@@ -897,11 +986,8 @@ onBeforeUnmount(() => {
   margin-bottom: 14px;
 }
 
-.post-publish__preview-content,
-.markdown-body {
-  color: #273449;
-  line-height: 1.85;
-  word-break: break-word;
+.post-publish__preview-content {
+  min-width: 0;
 }
 
 
