@@ -114,32 +114,6 @@
               <div v-else class="post-publish__cover-placeholder">封面预览区</div>
             </section>
 
-            <section class="post-publish__media-card">
-              <div class="post-publish__media-head">
-                <div>
-                  <p class="post-publish__eyebrow">Attachments</p>
-                  <h3>正文图片</h3>
-                </div>
-              </div>
-              <div class="post-publish__attachment-tools">
-                <label class="post-publish__upload-trigger">
-                  <input type="file" accept="image/*" multiple @change="uploadAttachments" />
-                  <span>{{ uploadingAttachments ? '上传中' : '上传图片' }}</span>
-                </label>
-                <span class="post-publish__hint">上传后会自动插入正文；移除附件时会同步移除自动插入的图片语法。</span>
-              </div>
-              <div v-if="attachmentFiles.length" class="post-publish__attachment-list">
-                <article v-for="file in attachmentFiles" :key="file.id" class="post-publish__attachment-item">
-                  <img :src="resolveAssetUrl(file.accessUrl)" alt="" />
-                  <div class="post-publish__attachment-copy">
-                    <strong>{{ file.originalName }}</strong>
-                    <p>{{ formatFileSize(file.sizeBytes) }}</p>
-                  </div>
-                  <a-button size="mini" status="danger" @click="removeAttachment(file.id)">移除</a-button>
-                </article>
-              </div>
-              <div v-else class="post-publish__attachment-empty">当前还没有上传正文图片。</div>
-            </section>
           </div>
 
           <a-form-item field="contentMd" label="正文 Markdown">
@@ -158,6 +132,25 @@
                   <a-button size="small" @click="insertTableTemplate">表格</a-button>
                   <a-button size="small" @click="insertHorizontalRule">分割线</a-button>
                   <a-button size="small" @click="insertLinkTemplate">链接</a-button>
+                </div>
+                <div class="post-publish__floating-attachments">
+                  <p class="post-publish__toolbar-title">正文图片</p>
+                  <label class="post-publish__upload-trigger post-publish__upload-trigger--block">
+                    <input type="file" accept="image/*" multiple @change="uploadAttachments" />
+                    <span>{{ uploadingAttachments ? '上传中' : '上传图片' }}</span>
+                  </label>
+                  <span class="post-publish__hint">上传后插入当前光标处。</span>
+                  <div v-if="attachmentFiles.length" class="post-publish__attachment-list post-publish__attachment-list--compact">
+                    <article v-for="file in attachmentFiles" :key="file.id" class="post-publish__attachment-item post-publish__attachment-item--compact">
+                      <img :src="resolveAssetUrl(file.accessUrl)" alt="" />
+                      <div class="post-publish__attachment-copy">
+                        <strong>{{ file.originalName }}</strong>
+                        <p>{{ formatFileSize(file.sizeBytes) }}</p>
+                      </div>
+                      <a-button size="mini" status="danger" @click="removeAttachment(file.id)">移除</a-button>
+                    </article>
+                  </div>
+                  <div v-else class="post-publish__attachment-empty">暂无正文图片。</div>
                 </div>
               </aside>
               <a-textarea
@@ -774,7 +767,7 @@ onBeforeUnmount(() => {
 
 .post-publish__media-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   margin: 4px 0 8px;
 }
@@ -828,6 +821,11 @@ onBeforeUnmount(() => {
   opacity: 0;
 }
 
+.post-publish__upload-trigger--block {
+  width: 100%;
+  min-width: 0;
+}
+
 .post-publish__cover-preview,
 .post-publish__cover {
   width: 100%;
@@ -852,6 +850,11 @@ onBeforeUnmount(() => {
   gap: 10px;
 }
 
+.post-publish__attachment-list--compact {
+  gap: 8px;
+  margin-top: 10px;
+}
+
 .post-publish__attachment-item {
   display: grid;
   grid-template-columns: 72px 1fr auto;
@@ -868,6 +871,32 @@ onBeforeUnmount(() => {
   height: 56px;
   object-fit: cover;
   border-radius: 8px;
+}
+
+.post-publish__attachment-item--compact {
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 8px;
+  padding: 8px;
+}
+
+.post-publish__attachment-item--compact img {
+  width: 42px;
+  height: 34px;
+}
+
+.post-publish__attachment-item--compact .arco-btn {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+}
+
+.post-publish__attachment-item--compact .post-publish__attachment-copy {
+  min-width: 0;
+}
+
+.post-publish__attachment-item--compact .post-publish__attachment-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .post-publish__attachment-copy strong,
@@ -921,6 +950,14 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+
+.post-publish__floating-attachments {
+  display: grid;
+  gap: 8px;
+  padding-top: 14px;
+  margin-top: 14px;
+  border-top: 1px solid var(--app-border-color-soft);
 }
 
 .post-publish__toolbar .arco-btn {
