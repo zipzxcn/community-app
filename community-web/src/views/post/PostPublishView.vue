@@ -131,18 +131,27 @@
 
           <a-form-item field="contentMd" label="正文 Markdown">
             <div class="post-publish__toolbar app-toolbar">
-              <a-button size="small" @click="wrapSelection('**', '**')">加粗</a-button>
-              <a-button size="small" @click="wrapSelection('*', '*')">斜体</a-button>
-              <a-button size="small" @click="wrapSelection('## ', '')">标题</a-button>
-              <a-button size="small" @click="wrapSelection('- ', '')">列表</a-button>
-              <a-button size="small" @click="wrapSelection('`', '`')">代码</a-button>
-              <a-button size="small" @click="wrapSelection('> ', '')">引用</a-button>
+              <a-button v-for="level in 6" :key="level" size="small" @click="applyHeading(level)">H{{ level }}</a-button>
+              <a-button size="small" @click="applyInlineFormat('**', '**', '加粗文本')">加粗</a-button>
+              <a-button size="small" @click="applyInlineFormat('*', '*', '斜体文本')">斜体</a-button>
+              <a-button size="small" @click="applyUnorderedList">无序列表</a-button>
+              <a-button size="small" @click="applyOrderedList">有序列表</a-button>
+              <a-button size="small" @click="applyTaskList">任务列表</a-button>
+              <a-button size="small" @click="applyCodeFormat">代码</a-button>
+              <a-button size="small" @click="applyBlockquote">引用</a-button>
+              <a-button size="small" @click="insertTableTemplate">表格</a-button>
+              <a-button size="small" @click="insertHorizontalRule">分割线</a-button>
+              <a-button size="small" @click="insertLinkTemplate">链接</a-button>
             </div>
             <a-textarea
               ref="editorRef"
               v-model="form.contentMd"
-              placeholder="支持基础 Markdown。"
+              placeholder="支持完整 Markdown：标题、段落、列表、任务列表、表格、引用、代码块、图片和链接。"
               :auto-size="{ minRows: 18, maxRows: 30 }"
+              @click="rememberEditorSelection"
+              @keyup="rememberEditorSelection"
+              @mouseup="rememberEditorSelection"
+              @select="rememberEditorSelection"
             />
           </a-form-item>
         </a-form>
@@ -221,6 +230,7 @@ const form = reactive({
   allowComment: true,
   tagIds: [] as number[],
 })
+const lastEditorSelection = ref({ start: 0, end: 0 })
 let autosaveTimer: number | undefined
 
 const isEditMode = computed(() => Boolean(props.postId))
@@ -389,8 +399,8 @@ async function removeAttachment(fileId: number) {
 }
 
 function appendAttachmentMarkdown(url: string, name: string) {
-  const block = `\n![${name}](${url})\n`
-  form.contentMd = `${form.contentMd}${block}`.trimStart()
+  const imageMarkdown = `![${escapeMarkdownText(name)}](${url})`
+  insertBlockAtCursor(imageMarkdown)
 }
 
 function removeAttachmentMarkdown(url: string, name: string) {
@@ -402,21 +412,169 @@ function removeAttachmentMarkdown(url: string, name: string) {
     .trim()
 }
 
-// 教学点：这些工具栏按钮本质上是在 textarea 光标区间插入 Markdown 语法糖。
-function wrapSelection(prefix: string, suffix: string) {
-  const textarea = editorRef.value?.$el?.querySelector('textarea') as HTMLTextAreaElement | undefined
-  if (!textarea) {
-    form.contentMd += `${prefix}${suffix}`
+function getEditorTextarea() {
+  return editorRef.value?.$el?.querySelector('textarea') as HTMLTextAreaElement | undefined
+}
+
+function clampSelection(value: number) {
+  return Math.max(0, Math.min(value, form.contentMd.length))
+}
+
+function rememberEditorSelection() {
+  const textarea = getEditorTextarea()
+  if (!textarea) return
+  lastEditorSelection.value = {
+    start: clampSelection(textarea.selectionStart),
+    end: clampSelection(textarea.selectionEnd),
+  }
+}
+
+function getEditorSelection() {
+  const textarea = getEditorTextarea()
+  if (textarea) {
+    return {
+      start: clampSelection(textarea.selectionStart),
+      end: clampSelection(textarea.selectionEnd),
+    }
+  }
+  return {
+    start: clampSelection(lastEditorSelection.value.start),
+    end: clampSelection(lastEditorSelection.value.end),
+  }
+}
+
+function replaceEditorSelection(text: string, cursorStartOffset = text.length, cursorEndOffset = cursorStartOffset) {
+  const { start, end } = getEditorSelection()
+  form.contentMd = `${form.contentMd.slice(0, start)}${text}${form.contentMd.slice(end)}`
+  const nextStart = start + cursorStartOffset
+  const nextEnd = start + cursorEndOffset
+  lastEditorSelection.value = { start: nextStart, end: nextEnd }
+  nextTick(() => {
+    const textarea = getEditorTextarea()
+    if (!textarea) return
+    textarea.focus()
+    textarea.setSelectionRange(nextStart, nextEnd)
+  })
+}
+
+function insertBlockAtCursor(block: string) {
+  const { start, end } = getEditorSelection()
+  const before = form.contentMd.slice(0, start)
+  const after = form.contentMd.slice(end)
+  const prefix = before && !before.endsWith('\n\n') ? before.endsWith('\n') ? '\n' : '\n\n' : ''
+  const suffix = after && !after.startsWith('\n\n') ? after.startsWith('\n') ? '\n' : '\n\n' : ''
+  const text = `${prefix}${block}${suffix}`
+  replaceEditorSelection(text)
+}
+
+function escapeMarkdownText(value: string) {
+  return value.replace(/([\\[\]])/g, '\\$1')
+}
+
+function selectedTextOrFallback(fallback: string) {
+  const { start, end } = getEditorSelection()
+  return form.contentMd.slice(start, end) || fallback
+}
+
+function applyInlineFormat(prefix: string, suffix: string, fallback: string) {
+  const selected = selectedTextOrFallback(fallback)
+  if (selected.includes('\n')) {
+    const formatted = selected
+      .split('\n')
+      .map((line) => (line.trim() ? `${prefix}${line}${suffix}` : line))
+      .join('\n')
+    replaceEditorSelection(formatted, 0, formatted.length)
     return
   }
-  const start = textarea.selectionStart
-  const end = textarea.selectionEnd
-  const selected = form.contentMd.slice(start, end)
-  form.contentMd = `${form.contentMd.slice(0, start)}${prefix}${selected}${suffix}${form.contentMd.slice(end)}`
+  const text = `${prefix}${selected}${suffix}`
+  replaceEditorSelection(text, prefix.length, prefix.length + selected.length)
+}
+
+function getSelectedLineRange() {
+  const { start, end } = getEditorSelection()
+  const lineStart = form.contentMd.lastIndexOf('\n', Math.max(0, start - 1)) + 1
+  const nextBreak = form.contentMd.indexOf('\n', end)
+  const lineEnd = nextBreak === -1 ? form.contentMd.length : nextBreak
+  return {
+    start: lineStart,
+    end: lineEnd,
+    text: form.contentMd.slice(lineStart, lineEnd),
+  }
+}
+
+function replaceLineRange(text: string) {
+  const range = getSelectedLineRange()
+  form.contentMd = `${form.contentMd.slice(0, range.start)}${text}${form.contentMd.slice(range.end)}`
+  lastEditorSelection.value = { start: range.start, end: range.start + text.length }
   nextTick(() => {
+    const textarea = getEditorTextarea()
+    if (!textarea) return
     textarea.focus()
-    textarea.setSelectionRange(start + prefix.length, start + prefix.length + selected.length)
+    textarea.setSelectionRange(range.start, range.start + text.length)
   })
+}
+
+function transformSelectedLines(transform: (line: string, index: number) => string) {
+  const range = getSelectedLineRange()
+  const lines = range.text ? range.text.split('\n') : ['']
+  replaceLineRange(lines.map(transform).join('\n'))
+}
+
+function stripBlockPrefix(line: string) {
+  return line
+    .replace(/^\s{0,3}#{1,6}\s+/, '')
+    .replace(/^\s{0,3}>\s?/, '')
+    .replace(/^\s{0,3}[-*+]\s+/, '')
+    .replace(/^\s{0,3}\d+\.\s+/, '')
+    .replace(/^\s{0,3}[-*+]\s+\[[ xX]\]\s+/, '')
+}
+
+function applyHeading(level: number) {
+  const prefix = `${'#'.repeat(level)} `
+  transformSelectedLines((line) => (line.trim() ? `${prefix}${stripBlockPrefix(line)}` : line))
+}
+
+function applyUnorderedList() {
+  transformSelectedLines((line) => (line.trim() ? `- ${stripBlockPrefix(line)}` : line))
+}
+
+function applyOrderedList() {
+  let order = 1
+  transformSelectedLines((line) => (line.trim() ? `${order++}. ${stripBlockPrefix(line)}` : line))
+}
+
+function applyTaskList() {
+  transformSelectedLines((line) => (line.trim() ? `- [ ] ${stripBlockPrefix(line)}` : line))
+}
+
+function applyBlockquote() {
+  transformSelectedLines((line) => (line.trim() ? `> ${line.replace(/^\s{0,3}>\s?/, '')}` : line))
+}
+
+function applyCodeFormat() {
+  const selected = selectedTextOrFallback('code')
+  if (selected.includes('\n')) {
+    const text = `\`\`\`txt\n${selected.replace(/^```.*\n?|\n?```$/g, '')}\n\`\`\``
+    replaceEditorSelection(text, 7, 7 + selected.length)
+    return
+  }
+  const text = `\`${selected}\``
+  replaceEditorSelection(text, 1, 1 + selected.length)
+}
+
+function insertTableTemplate() {
+  const table = '| 列 1 | 列 2 | 列 3 |\n| --- | --- | --- |\n| 内容 | 内容 | 内容 |'
+  insertBlockAtCursor(table)
+}
+
+function insertHorizontalRule() {
+  insertBlockAtCursor('---')
+}
+
+function insertLinkTemplate() {
+  const selected = selectedTextOrFallback('链接文字')
+  const text = `[${selected}](https://example.com)`
+  replaceEditorSelection(text, 1, 1 + selected.length)
 }
 
 // 提交时根据是否存在 postId 区分“新建帖子”和“编辑帖子”两条业务路径。
@@ -746,33 +904,6 @@ onBeforeUnmount(() => {
   word-break: break-word;
 }
 
-.markdown-body :deep(h1),
-.markdown-body :deep(h2),
-.markdown-body :deep(h3) {
-  margin: 16px 0 10px;
-  color: var(--app-text-1);
-}
-
-.markdown-body :deep(p),
-.markdown-body :deep(ul),
-.markdown-body :deep(ol),
-.markdown-body :deep(blockquote) {
-  margin: 0 0 12px;
-}
-
-.markdown-body :deep(code) {
-  padding: 2px 6px;
-  font-family: Consolas, monospace;
-  background: #f1f5f9;
-  border-radius: 6px;
-}
-
-.markdown-body :deep(img) {
-  display: block;
-  max-width: 100%;
-  margin: 14px 0;
-  border-radius: 12px;
-}
 
 @media (max-width: 1100px) {
   .post-publish__header,

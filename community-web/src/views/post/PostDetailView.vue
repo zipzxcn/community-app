@@ -717,33 +717,6 @@ watch(
   margin-top: 22px;
 }
 
-.markdown-body :deep(h1),
-.markdown-body :deep(h2),
-.markdown-body :deep(h3) {
-  margin: 16px 0 10px;
-  color: var(--app-text-1);
-}
-
-.markdown-body :deep(p),
-.markdown-body :deep(ul),
-.markdown-body :deep(ol),
-.markdown-body :deep(blockquote) {
-  margin: 0 0 12px;
-}
-
-.markdown-body :deep(code) {
-  padding: 2px 6px;
-  font-family: Consolas, monospace;
-  background: #f1f5f9;
-  border-radius: 6px;
-}
-
-.markdown-body :deep(img) {
-  display: block;
-  max-width: 100%;
-  margin: 14px 0;
-  border-radius: 12px;
-}
 
 @media (max-width: 960px) {
   .post-detail__hero {

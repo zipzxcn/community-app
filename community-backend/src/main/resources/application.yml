@@ -6,6 +6,8 @@ spring:
   profiles:
     # 激活环境，默认走 dev。
     active: dev
+
+
   jackson:
     # Jackson 配置：统一 JSON 序列化规则，避免空字段噪音与时间戳可读性问题。
     default-property-inclusion: non_null
