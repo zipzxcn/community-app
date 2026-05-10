@@ -4,7 +4,10 @@
       <div class="post-card__content">
         <div class="post-card__top">
           <div class="post-card__author">
-            <span class="post-card__author-mark">{{ displayInitial }}</span>
+            <span class="post-card__author-mark">
+              <img v-if="post.author?.avatarUrl" :src="resolveAssetUrl(post.author.avatarUrl)" alt="" />
+              <template v-else>{{ displayInitial }}</template>
+            </span>
             <div class="post-card__author-copy">
               <strong>{{ post.author?.nickname || post.author?.username || '匿名用户' }}</strong>
               <small>{{ formatDateTime(post.publishedAt) }}</small>
@@ -136,12 +139,19 @@ const postLink = computed(() => {
   justify-content: center;
   width: 42px;
   height: 42px;
+  overflow: hidden;
   color: var(--app-primary);
   font-size: 15px;
   font-weight: 800;
   background: linear-gradient(135deg, rgba(204, 251, 241, 0.92), rgba(219, 234, 254, 0.92));
-  border-radius: 14px;
+  border-radius: 50%;
   box-shadow: 0 10px 26px rgba(15, 118, 110, 0.12);
+}
+
+.post-card__author-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .post-card__author-copy {
