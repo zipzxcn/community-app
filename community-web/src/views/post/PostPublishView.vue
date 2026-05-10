@@ -143,30 +143,35 @@
           </div>
 
           <a-form-item field="contentMd" label="正文 Markdown">
-            <div class="post-publish__toolbar app-toolbar">
-              <a-button v-for="level in 6" :key="level" size="small" @click="applyHeading(level)">H{{ level }}</a-button>
-              <a-button size="small" @click="applyInlineFormat('**', '**', '加粗文本')">加粗</a-button>
-              <a-button size="small" @click="applyInlineFormat('*', '*', '斜体文本')">斜体</a-button>
-              <a-button size="small" @click="applyUnorderedList">无序列表</a-button>
-              <a-button size="small" @click="applyOrderedList">有序列表</a-button>
-              <a-button size="small" @click="applyTaskList">任务列表</a-button>
-              <a-button size="small" @click="applyCodeFormat">代码</a-button>
-              <a-button size="small" @click="applyBlockquote">引用</a-button>
-              <a-button size="small" @click="insertTableTemplate">表格</a-button>
-              <a-button size="small" @click="insertHorizontalRule">分割线</a-button>
-              <a-button size="small" @click="insertLinkTemplate">链接</a-button>
+            <div class="post-publish__markdown-workbench">
+              <aside class="post-publish__toolbar-panel">
+                <p class="post-publish__toolbar-title">格式工具</p>
+                <div class="post-publish__toolbar app-toolbar">
+                  <a-button v-for="level in 6" :key="level" size="small" @click="applyHeading(level)">H{{ level }}</a-button>
+                  <a-button size="small" @click="applyInlineFormat('**', '**', '加粗文本')">加粗</a-button>
+                  <a-button size="small" @click="applyInlineFormat('*', '*', '斜体文本')">斜体</a-button>
+                  <a-button size="small" @click="applyUnorderedList">无序列表</a-button>
+                  <a-button size="small" @click="applyOrderedList">有序列表</a-button>
+                  <a-button size="small" @click="applyTaskList">任务列表</a-button>
+                  <a-button size="small" @click="applyCodeFormat">代码</a-button>
+                  <a-button size="small" @click="applyBlockquote">引用</a-button>
+                  <a-button size="small" @click="insertTableTemplate">表格</a-button>
+                  <a-button size="small" @click="insertHorizontalRule">分割线</a-button>
+                  <a-button size="small" @click="insertLinkTemplate">链接</a-button>
+                </div>
+              </aside>
+              <a-textarea
+                ref="editorRef"
+                class="post-publish__textarea"
+                v-model="form.contentMd"
+                placeholder="支持完整 Markdown：标题、段落、列表、任务列表、表格、引用、代码块、图片和链接。"
+                :auto-size="{ minRows: workspaceMode === 'edit' ? 34 : 28, maxRows: 56 }"
+                @click="rememberEditorSelection"
+                @keyup="rememberEditorSelection"
+                @mouseup="rememberEditorSelection"
+                @select="rememberEditorSelection"
+              />
             </div>
-            <a-textarea
-              ref="editorRef"
-              class="post-publish__textarea"
-              v-model="form.contentMd"
-              placeholder="支持完整 Markdown：标题、段落、列表、任务列表、表格、引用、代码块、图片和链接。"
-              :auto-size="{ minRows: workspaceMode === 'edit' ? 34 : 28, maxRows: 56 }"
-              @click="rememberEditorSelection"
-              @keyup="rememberEditorSelection"
-              @mouseup="rememberEditorSelection"
-              @select="rememberEditorSelection"
-            />
           </a-form-item>
         </a-form>
 
@@ -879,22 +884,62 @@ onBeforeUnmount(() => {
   line-height: 1.7;
 }
 
-.post-publish__toolbar {
+.post-publish__markdown-workbench {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: 14px;
+  width: 100%;
+  align-items: start;
+}
+
+.post-publish__toolbar-panel {
   position: sticky;
-  top: 94px;
-  z-index: 5;
-  margin-bottom: 10px;
-  padding: 10px;
+  top: clamp(112px, 22vh, 220px);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  max-height: calc(100vh - 150px);
+  padding: 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid var(--app-border-color-soft);
   border-radius: 14px;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
   backdrop-filter: blur(14px);
+}
+
+.post-publish__toolbar-title {
+  margin: 0 0 10px;
+  color: var(--app-text-3);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.post-publish__toolbar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.post-publish__toolbar .arco-btn {
+  min-width: 0;
+  padding-inline: 8px;
+}
+
+.post-publish--edit .post-publish__markdown-workbench {
+  grid-template-columns: 190px minmax(0, 1fr);
 }
 
 .post-publish__textarea :deep(textarea) {
   font-family: Consolas, Monaco, 'Courier New', monospace;
   font-size: 14px;
   line-height: 1.8;
+}
+
+.post-publish__textarea :deep(.arco-textarea-wrapper) {
+  height: 100%;
 }
 
 .post-publish__mode-bar {
@@ -1008,9 +1053,18 @@ onBeforeUnmount(() => {
   .post-publish__row,
   .post-publish__cover-field,
   .post-publish__attachment-tools,
+  .post-publish__markdown-workbench,
   .post-publish__attachment-item,
   .post-publish__actions {
     grid-template-columns: 1fr;
+  }
+
+  .post-publish__toolbar-panel {
+    justify-content: flex-start;
+  }
+
+  .post-publish__toolbar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .post-publish__header h1 {
