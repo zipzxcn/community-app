@@ -35,13 +35,14 @@ mybatis-plus:
   type-aliases-package: com.community.backend.entity
   global-config:
     db-config:
-      id-type: auto
+      id-type: auto # 主键生成策略
+      # 逻辑删除
       logic-delete-field: isDeleted
       logic-delete-value: 1
       logic-not-delete-value: 0
   configuration:
-    map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true # 下划线转驼峰
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl #控制台日志级别
 
 
 # OpenAPI/Swagger 文档配置：便于前后端联调。
@@ -88,7 +89,7 @@ app:
   security:
     jwt:
       secret: change-this-secret-change-this-secret
-      access-token-expire-seconds: 7200
+      access-token-expire-seconds: 7200 # 1000 * 60 * 60 * 24
       refresh-token-expire-seconds: 1209600
   history:
     cleanup:

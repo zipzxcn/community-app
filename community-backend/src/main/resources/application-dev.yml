@@ -6,7 +6,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
   flyway:
     enabled: true
-    locations: classpath:db/migration
+    locations: classpath:db/migration #community-backend\src\main\resources\db\migration
     baseline-on-migrate: true
     baseline-version: 0
 

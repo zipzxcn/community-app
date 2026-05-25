@@ -36,7 +36,8 @@ public class SecurityConfig {
                 // 纯前后端分离 + JWT 场景通常不依赖服务端 Session，因此关闭默认 CSRF。
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // 这里先做访问控制声明，再把 JWT 过滤器插到用户名密码过滤器之前。
                 .authorizeHttpRequests(auth -> auth
                         // 显式放行预检请求，避免浏览器在 CORS 预检阶段被拦截。

@@ -166,6 +166,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         AppUser user = mustGetActiveUser(session.getUserId());
+        // 生成新的 accessToken 和 refreshToken。
         String newAccessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getUsername());
         String newRefreshToken = UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "");
         String newRefreshTokenHash = TokenHashUtils.sha256(newRefreshToken);

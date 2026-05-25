@@ -36,8 +36,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         // Bearer Token 约定写在 Authorization 头中，这是前后端联调最常见的 JWT 传递方式。
         String authorization = request.getHeader("Authorization");
+        // 检查是否有 Bearer Token
         if (StringUtils.hasText(authorization) && authorization.startsWith("Bearer ")) {
             String token = authorization.substring(7);
+            // 校验 Token 是否有效
             if (jwtTokenProvider.validateToken(token)) {
                 // 令牌有效时将用户身份注入上下文，供后续 SecurityUtils 读取
                 Long userId = jwtTokenProvider.getUserId(token);
@@ -52,6 +54,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         }
+        // 放行为匿名请求，继续处理后续过滤器
         filterChain.doFilter(request, response);
     }
 }

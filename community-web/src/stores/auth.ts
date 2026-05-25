@@ -5,7 +5,7 @@
  * - 供路由守卫、Axios 拦截器、页面头部统一读取。
  */
 import { defineStore } from 'pinia'
-import { fetchCurrentUser, login, logout as logoutApi } from '@/api/auth'
+import { fetchCurrentUser, login, logout as logoutApi, refreshToken as refreshTokenApi } from '@/api/auth'
 import type { CurrentUser } from '@/types/user'
 import type { LoginPayload, LoginResult } from '@/types/auth'
 
@@ -72,20 +72,37 @@ export const useAuthStore = defineStore('auth', {
       this.setLogin(result)
       return result
     },
+    // 使用 refreshToken 续签登录态；成功后会轮换并持久化新的 accessToken/refreshToken。
+    async refreshSession() {
+      if (!this.refreshToken) {
+        throw new Error('refreshToken 不存在')
+      }
+      const result = await refreshTokenApi(this.refreshToken)
+      this.setLogin(result)
+      return result
+    },
     // restore 会在路由守卫中触发：若本地还有 token，则调用 /auth/me 校验会话是否仍有效。
     async restore() {
       if (this.initialized) {
         return
       }
       this.initialized = true
-      if (!this.accessToken) {
+      if (!this.accessToken && !this.refreshToken) {
         return
       }
       try {
-        this.userInfo = await fetchCurrentUser()
+        if (!this.accessToken && this.refreshToken) {
+          await this.refreshSession()
+        } else {
+          this.userInfo = await fetchCurrentUser()
+        }
         this.persist()
       } catch {
-        this.clear()
+        try {
+          await this.refreshSession()
+        } catch {
+          this.clear()
+        }
       }
     },
     clear() {

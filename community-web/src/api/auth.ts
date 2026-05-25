@@ -34,6 +34,13 @@ export function fetchCurrentUser() {
 }
 
 /**
+ * refreshToken：用长期 refreshToken 换取新的 accessToken 与 refreshToken。
+ */
+export function refreshToken(refreshToken: string) {
+  return client.post<never, LoginResult>('/auth/refresh', { refreshToken })
+}
+
+/**
  * logout：按函数名对应后端接口完成请求封装。
  */
 export function logout(refreshToken: string) {
