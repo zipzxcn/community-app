@@ -89,7 +89,7 @@ app:
   security:
     jwt:
       secret: change-this-secret-change-this-secret
-      access-token-expire-seconds: 7200 # 1000 * 60 * 60 * 24
+      access-token-expire-seconds: 7200
       refresh-token-expire-seconds: 1209600
   history:
     cleanup:

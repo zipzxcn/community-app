@@ -10,6 +10,9 @@ import type { CurrentUser } from '@/types/user'
 import type { LoginPayload, LoginResult } from '@/types/auth'
 
 const STORAGE_KEY = 'community-auth'
+const ACCESS_TOKEN_REFRESH_BUFFER_SECONDS = 60
+
+let refreshSessionPromise: Promise<LoginResult> | null = null
 
 interface AuthState {
   accessToken: string
@@ -35,6 +38,29 @@ function loadStoredAuth(): Pick<AuthState, 'accessToken' | 'refreshToken' | 'use
     localStorage.removeItem(STORAGE_KEY)
     return { accessToken: '', refreshToken: '', userInfo: null }
   }
+}
+
+function decodeJwtPayload(token: string): { exp?: number } | null {
+  try {
+    const payload = token.split('.')[1]
+    if (!payload) {
+      return null
+    }
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')
+    return JSON.parse(atob(padded)) as { exp?: number }
+  } catch {
+    return null
+  }
+}
+
+function shouldRefreshAccessToken(token: string) {
+  const payload = decodeJwtPayload(token)
+  if (!payload?.exp) {
+    return false
+  }
+  const refreshBefore = (payload.exp - ACCESS_TOKEN_REFRESH_BUFFER_SECONDS) * 1000
+  return Date.now() >= refreshBefore
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -77,9 +103,25 @@ export const useAuthStore = defineStore('auth', {
       if (!this.refreshToken) {
         throw new Error('refreshToken 不存在')
       }
-      const result = await refreshTokenApi(this.refreshToken)
-      this.setLogin(result)
-      return result
+      if (!refreshSessionPromise) {
+        refreshSessionPromise = refreshTokenApi(this.refreshToken)
+          .then((result) => {
+            this.setLogin(result)
+            return result
+          })
+          .finally(() => {
+            refreshSessionPromise = null
+          })
+      }
+      return refreshSessionPromise
+    },
+    async ensureValidAccessToken() {
+      if (!this.refreshToken) {
+        return
+      }
+      if (!this.accessToken || shouldRefreshAccessToken(this.accessToken)) {
+        await this.refreshSession()
+      }
     },
     // restore 会在路由守卫中触发：若本地还有 token，则调用 /auth/me 校验会话是否仍有效。
     async restore() {

@@ -57,8 +57,13 @@ export const useChatStore = defineStore('chat', {
       listeners.add(listener)
       return () => listeners.delete(listener)
     },
-    connect() {
+    async connect() {
       const authStore = useAuthStore()
+      try {
+        await authStore.ensureValidAccessToken()
+      } catch {
+        authStore.clear()
+      }
       if (!authStore.accessToken) {
         this.disconnect()
         return

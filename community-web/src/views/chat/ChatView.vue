@@ -185,6 +185,10 @@ import { useNotificationStore } from '@/stores/notification'
 import type { ChatMessageItem, ChatReadReceipt, ChatThreadItem, ChatWsEnvelope } from '@/types/chat'
 import { formatDateTime, resolveAssetUrl } from '@/utils/format'
 
+type RenderableChatThreadItem = ChatThreadItem & {
+  peerUser: NonNullable<ChatThreadItem['peerUser']>
+}
+
 const router = useRouter()
 // 教学点：聊天页支持从别的页面带 query 进来，比如从用户主页点击“发私信”后自动定位到目标用户。
 const route = useRoute()
@@ -198,8 +202,8 @@ const messageLoading = ref(false)
 const loadingMore = ref(false)
 const refreshing = ref(false)
 const sending = ref(false)
-const threads = ref<ChatThreadItem[]>([])
-const activeThread = ref<ChatThreadItem | null>(null)
+const threads = ref<RenderableChatThreadItem[]>([])
+const activeThread = ref<RenderableChatThreadItem | null>(null)
 const messages = ref<ChatMessageItem[]>([])
 const draft = ref('')
 const messageListRef = ref<HTMLElement | null>(null)
@@ -211,7 +215,11 @@ let pollTimer: number | null = null
 let pingTimer: number | null = null
 let unsubscribe: (() => void) | null = null
 
-const activePeerId = computed(() => activeThread.value?.peerUser.id || 0)
+const activePeerId = computed(() => activeThread.value?.peerUser?.id || 0)
+
+function hasPeerUser(item: ChatThreadItem): item is RenderableChatThreadItem {
+  return Boolean(item.peerUser?.id)
+}
 
 function scrollToBottom() {
   nextTick(() => {
@@ -222,6 +230,9 @@ function scrollToBottom() {
 }
 
 function upsertThread(item: ChatThreadItem) {
+  if (!hasPeerUser(item)) {
+    return
+  }
   const index = threads.value.findIndex((thread) => thread.peerUser.id === item.peerUser.id)
   if (index >= 0) {
     threads.value.splice(index, 1, item)
@@ -237,9 +248,9 @@ async function loadThreads(options: { silent?: boolean } = {}) {
   }
   try {
     const result = await fetchChatThreads()
-    threads.value = result.list
+    threads.value = result.list.filter(hasPeerUser)
     if (activeThread.value) {
-      const matched = result.list.find((item) => item.peerUser.id === activeThread.value?.peerUser.id)
+      const matched = threads.value.find((item) => item.peerUser.id === activeThread.value?.peerUser.id)
       if (matched) {
         activeThread.value = matched
       }
@@ -302,17 +313,20 @@ async function loadMessages(threadId: number, options: { cursor?: number; prepen
   }
 }
 
-async function ensureThread(item: ChatThreadItem) {
+async function ensureThread(item: RenderableChatThreadItem) {
   if (item.threadId) {
     return item
   }
   const opened = await openChatThread(item.peerUser.id)
+  if (!hasPeerUser(opened)) {
+    throw new Error('会话对方用户不存在，请刷新后重试')
+  }
   upsertThread(opened)
   return opened
 }
 
 // 教学点：选中会话时，如果 threadId 为空，说明这是“互关但未开聊”的占位项，需要先创建真实会话。
-async function selectThread(item: ChatThreadItem) {
+async function selectThread(item: RenderableChatThreadItem) {
   try {
     const resolved = await ensureThread(item)
     activeThread.value = resolved
@@ -411,6 +425,9 @@ async function applyRouteIntent() {
     if (Number.isFinite(targetUserId) && targetUserId > 0) {
       try {
         const opened = await openChatThread(targetUserId)
+        if (!hasPeerUser(opened)) {
+          throw new Error('会话对方用户不存在，请刷新后重试')
+        }
         upsertThread(opened)
         activeThread.value = opened
         await router.replace({

@@ -79,13 +79,13 @@ public class PostServiceImpl implements PostService {
     public PostServiceImpl(PostMapper postMapper,
                            TagMapper tagMapper,
                            PostTagRelMapper postTagRelMapper,
-                            AppUserMapper appUserMapper,
-                            PostLikeMapper postLikeMapper,
-                            PostFavoriteMapper postFavoriteMapper,
-                            FileObjectMapper fileObjectMapper,
-                            NotificationService notificationService,
-                            UserBrowseHistoryMapper userBrowseHistoryMapper,
-                            UserFollowMapper userFollowMapper) {
+                           AppUserMapper appUserMapper,
+                           PostLikeMapper postLikeMapper,
+                           PostFavoriteMapper postFavoriteMapper,
+                           FileObjectMapper fileObjectMapper,
+                           NotificationService notificationService,
+                           UserBrowseHistoryMapper userBrowseHistoryMapper,
+                           UserFollowMapper userFollowMapper) {
         this.postMapper = postMapper;
         this.tagMapper = tagMapper;
         this.postTagRelMapper = postTagRelMapper;
@@ -156,6 +156,7 @@ public class PostServiceImpl implements PostService {
                     .filter(Objects::nonNull)
                     .distinct()
                     .toList();
+            // 注意7：绑定文件时，确保文件是当前用户上传的，避免跨用户操作。
             if (!fileIds.isEmpty()) {
                 fileObjectMapper.update(null, new LambdaUpdateWrapper<FileObject>()
                         .in(FileObject::getId, fileIds)
@@ -177,18 +178,21 @@ public class PostServiceImpl implements PostService {
      */
     @Override
     public PageResponse<PostListItemVo> list(PostQueryRequest query, Long currentUserId) {
-        Page<Post> page = new Page<>(query.getPage(), query.getSize());
+        Page<Post> page = new Page<>(query.getPage(), query.getSize()); // 分页查询
+        // 只查询已发布的帖子，避免返回草稿状态的帖子。
         LambdaQueryWrapper<Post> wrapper = new LambdaQueryWrapper<Post>()
                 .eq(Post::getStatus, "PUBLISHED")
                 .eq(Post::getIsDeleted, 0);
         if (query.getAuthorId() != null) {
             wrapper.eq(Post::getAuthorId, query.getAuthorId());
         }
+        // 模糊搜索标题与摘要，支持中文与英文。
         if (StringUtils.hasText(query.getKeyword())) {
             wrapper.and(w -> w.like(Post::getTitle, query.getKeyword())
                     .or()
                     .like(Post::getExcerpt, query.getKeyword()));
         }
+        // 根签筛选：根据指定标签 ID 筛选帖子。
         if (query.getTagId() != null) {
             List<Long> postIds = postTagRelMapper.selectList(new LambdaQueryWrapper<PostTagRel>()
                             .eq(PostTagRel::getTagId, query.getTagId()))
@@ -196,6 +200,7 @@ public class PostServiceImpl implements PostService {
                     .map(PostTagRel::getPostId)
                     .toList();
             if (postIds.isEmpty()) {
+                // 如果指定标签没有帖子，直接返回空列表。
                 return PageResponse.<PostListItemVo>builder()
                         .list(Collections.emptyList())
                         .page(query.getPage())
@@ -206,6 +211,7 @@ public class PostServiceImpl implements PostService {
             }
             wrapper.in(Post::getId, postIds);
         }
+        // 排序规则：控制列表按最新或热门等方式返回。
         if ("hot".equalsIgnoreCase(query.getSort())) {
             wrapper.orderByDesc(Post::getLikeCount)
                     .orderByDesc(Post::getCommentCount)
@@ -215,7 +221,7 @@ public class PostServiceImpl implements PostService {
         }
 
         // 注意：列表查询先尽量在数据库层完成筛选和排序，减少把大量无关数据拉到内存里再处理。
-        Page<Post> result = postMapper.selectPage(page, wrapper);
+        Page<Post> result = postMapper.selectPage(page, wrapper); // 分页查询帖子
         if (result.getRecords().isEmpty()) {
             return PageResponse.<PostListItemVo>builder()
                     .list(Collections.emptyList())
@@ -226,12 +232,12 @@ public class PostServiceImpl implements PostService {
                     .build();
         }
 
-        List<Long> postIds = result.getRecords().stream().map(Post::getId).toList();
+        List<Long> postIds = result.getRecords().stream().map(Post::getId).toList(); // 提取帖子 ID 列表
         // 注意：列表页需要作者、标签、点赞收藏状态等“附加信息”，这里采用批量预加载，避免 N+1 查询。
-        Map<Long, UserSummaryVo> authorMap = loadAuthorMap(result.getRecords().stream().map(Post::getAuthorId).toList());
-        Map<Long, List<TagVo>> tagMap = loadTagMapByPostIds(postIds);
-        Set<Long> likedSet = loadLikedPostSet(currentUserId, postIds);
-        Set<Long> favoritedSet = loadFavoritedPostSet(currentUserId, postIds);
+        Map<Long, UserSummaryVo> authorMap = loadAuthorMap(result.getRecords().stream().map(Post::getAuthorId).toList()); // 批量加载作者信息
+        Map<Long, List<TagVo>> tagMap = loadTagMapByPostIds(postIds); // 批量加载标签信息
+        Set<Long> likedSet = loadLikedPostSet(currentUserId, postIds); // 批量加载点赞状态
+        Set<Long> favoritedSet = loadFavoritedPostSet(currentUserId, postIds); // 批量加载收藏状态
 
         List<PostListItemVo> list = result.getRecords().stream().map(post -> {
             PostListItemVo vo = new PostListItemVo();
@@ -364,12 +370,14 @@ public class PostServiceImpl implements PostService {
     @Transactional(rollbackFor = Exception.class)
     public void like(Long currentUserId, Long postId) {
         Post post = mustGetPublishedPost(postId);
+        // 检查用户是否已点赞该帖子
         PostLike existing = postLikeMapper.selectOne(new LambdaQueryWrapper<PostLike>()
                 .eq(PostLike::getUserId, currentUserId)
                 .eq(PostLike::getPostId, postId)
                 .last("LIMIT 1"));
         // 注意：点赞/收藏都采用“先查关系表，再决定插入、恢复还是忽略”的幂等写法。
         if (existing == null) {
+            // 未点赞，新增点赞记录
             postLikeMapper.insert(PostLike.builder()
                     .userId(currentUserId)
                     .postId(postId)
@@ -381,12 +389,14 @@ public class PostServiceImpl implements PostService {
             return;
         }
         if ("ACTIVE".equals(existing.getStatus())) {
+            // 已点赞，无需重复操作
             return;
         }
+        // 已取消点赞，更新状态为 ACTIVE 进行点赞操作
         postLikeMapper.update(null, new LambdaUpdateWrapper<PostLike>()
                 .eq(PostLike::getId, existing.getId())
                 .set(PostLike::getStatus, "ACTIVE"));
-        increasePostLikeCount(postId);
+        increasePostLikeCount(postId); // 帖子点赞+1
         // 取消后再次点赞同样需要触发通知
         createPostLikeNotification(currentUserId, post);
     }
@@ -404,9 +414,11 @@ public class PostServiceImpl implements PostService {
         if (existing == null || !"ACTIVE".equals(existing.getStatus())) {
             return;
         }
+        // 已点赞，更新状态为 CANCELLED 进行取消点赞操作
         postLikeMapper.update(null, new LambdaUpdateWrapper<PostLike>()
                 .eq(PostLike::getId, existing.getId())
                 .set(PostLike::getStatus, "CANCELLED"));
+        // 取消点赞后触发通知，更新帖子点赞数
         postMapper.update(null, new LambdaUpdateWrapper<Post>()
                 .eq(Post::getId, postId)
                 .setSql("like_count = IF(like_count > 0, like_count - 1, 0)"));
@@ -694,12 +706,12 @@ public class PostServiceImpl implements PostService {
             return Collections.emptyList();
         }
         return postMapper.selectList(new LambdaQueryWrapper<Post>()
-                        .in(Post::getAuthorId, authorIds)
-                        .ne(currentUserId != null, Post::getAuthorId, currentUserId)
-                        .eq(Post::getIsDeleted, 0)
-                        .eq(Post::getStatus, "PUBLISHED")
-                        .orderByDesc(Post::getPublishedAt)
-                        .last("LIMIT " + limit));
+                .in(Post::getAuthorId, authorIds)
+                .ne(currentUserId != null, Post::getAuthorId, currentUserId)
+                .eq(Post::getIsDeleted, 0)
+                .eq(Post::getStatus, "PUBLISHED")
+                .orderByDesc(Post::getPublishedAt)
+                .last("LIMIT " + limit));
     }
 
     private List<Post> loadPostsByTagIds(Set<Long> tagIds, Long currentUserId, int limit) {
@@ -717,12 +729,12 @@ public class PostServiceImpl implements PostService {
             return Collections.emptyList();
         }
         return postMapper.selectList(new LambdaQueryWrapper<Post>()
-                        .in(Post::getId, postIds)
-                        .ne(currentUserId != null, Post::getAuthorId, currentUserId)
-                        .eq(Post::getIsDeleted, 0)
-                        .eq(Post::getStatus, "PUBLISHED")
-                        .orderByDesc(Post::getPublishedAt)
-                        .last("LIMIT " + limit));
+                .in(Post::getId, postIds)
+                .ne(currentUserId != null, Post::getAuthorId, currentUserId)
+                .eq(Post::getIsDeleted, 0)
+                .eq(Post::getStatus, "PUBLISHED")
+                .orderByDesc(Post::getPublishedAt)
+                .last("LIMIT " + limit));
     }
 
     private List<Post> loadTopHotPosts(int limit) {
@@ -946,6 +958,11 @@ public class PostServiceImpl implements PostService {
         List<AppUser> users = appUserMapper.selectList(new LambdaQueryWrapper<AppUser>()
                 .in(AppUser::getId, new ArrayList<>(new LinkedHashSet<>(authorIds)))
                 .eq(AppUser::getIsDeleted, 0));
+        /* 构建用户摘要映射
+         合并函数 — 当遇到重复 Key 时，保留第一个值（避免抛出异常）
+         LinkedHashMap::new	使用 LinkedHashMap 保持插入顺序
+         Function.identity() 等价 user -> user
+        */
         return users.stream().map(user -> {
                     UserSummaryVo vo = new UserSummaryVo();
                     vo.setId(user.getId());
@@ -962,28 +979,39 @@ public class PostServiceImpl implements PostService {
      */
     private Map<Long, List<TagVo>> loadTagMapByPostIds(List<Long> postIds) {
         if (CollectionUtils.isEmpty(postIds)) {
+            // 如果帖子列表为空，直接返回空映射。
             return Collections.emptyMap();
         }
         List<PostTagRel> rels = postTagRelMapper.selectList(new LambdaQueryWrapper<PostTagRel>()
                 .in(PostTagRel::getPostId, postIds));
         if (rels.isEmpty()) {
+            // 如果帖子没有关联标签，直接返回空映射。
             return Collections.emptyMap();
         }
+        // 提取所有关联的标签 ID 列表
         List<Long> tagIds = rels.stream().map(PostTagRel::getTagId).distinct().toList();
+        // 批量加载标签信息
         Map<Long, TagVo> tagVoMap = tagMapper.selectList(new LambdaQueryWrapper<Tag>().in(Tag::getId, tagIds)).stream()
                 .collect(Collectors.toMap(Tag::getId, tag -> {
                     TagVo vo = new TagVo();
                     vo.setId(tag.getId());
                     vo.setName(tag.getName());
                     return vo;
-                }, (a, b) -> a));
+                }, (a, b) -> a)); //(a, b) -> a	合并函数 — 当遇到重复 Key 时，保留第一个值（避免抛出异常）
 
+        // 构建帖子-标签映射
         Map<Long, List<TagVo>> result = new LinkedHashMap<>();
         for (PostTagRel rel : rels) {
             TagVo tagVo = tagVoMap.get(rel.getTagId());
             if (tagVo == null) {
+                // 如果该帖子没有关联的标签，跳过。
                 continue;
             }
+            /*
+                如果 postId 已存在 → 直接返回已有的 List<TagVo>
+                如果 postId 不存在 → 创建新的 ArrayList<>() 并存入
+                然后将当前标签 add 到列表中
+             */
             result.computeIfAbsent(rel.getPostId(), k -> new ArrayList<>()).add(tagVo);
         }
         return result;
@@ -994,6 +1022,7 @@ public class PostServiceImpl implements PostService {
      */
     private Set<Long> loadLikedPostSet(Long currentUserId, List<Long> postIds) {
         if (currentUserId == null || CollectionUtils.isEmpty(postIds)) {
+            // 未登录情况 或 帖子列表为空，直接返回空集合。
             return Collections.emptySet();
         }
         return postLikeMapper.selectList(new LambdaQueryWrapper<PostLike>()
@@ -1010,6 +1039,7 @@ public class PostServiceImpl implements PostService {
      */
     private Set<Long> loadFavoritedPostSet(Long currentUserId, List<Long> postIds) {
         if (currentUserId == null || CollectionUtils.isEmpty(postIds)) {
+            // 未登录情况 或 帖子列表为空，直接返回空集合。
             return Collections.emptySet();
         }
         return postFavoriteMapper.selectList(new LambdaQueryWrapper<PostFavorite>()

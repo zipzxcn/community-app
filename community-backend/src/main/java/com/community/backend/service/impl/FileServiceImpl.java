@@ -62,12 +62,14 @@ public class FileServiceImpl implements FileService {
     @Override
     public UploadTokenVo createUploadToken(Long currentUserId, UploadTokenRequest request) {
         // 当前阶段仅实现 MinIO 直传，其他 provider 后续扩展
-        ensureMinioProvider();
-        MinioClient minioClient = requiredMinioClient();
-        String bucket = requiredBucket();
+        ensureMinioProvider(); // 确保使用 MinIO 客户端
+        MinioClient minioClient = requiredMinioClient(); // 获取 MinIO 客户端
+        String bucket = requiredBucket(); // 获取存储桶名称
         // 兜底：首次联调时若 bucket 尚未创建，这里自动创建避免接口报错
         ensureBucketExists(minioClient, bucket);
+        // 生成对象key，格式为 user/{userId}/{bizType}/{fileName}，确保唯一性
         String objectKey = buildObjectKey(currentUserId, request.getBizType(), request.getFileName());
+        // 生成预签名上传地址，有效期 900 秒
         try {
             String uploadUrl = minioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
@@ -77,7 +79,6 @@ public class FileServiceImpl implements FileService {
                             .expiry(requiredExpireSeconds())
                             .build()
             );
-
             UploadTokenVo vo = new UploadTokenVo();
             vo.setProvider(storageProperties.getProvider().toUpperCase(Locale.ROOT));
             vo.setUploadUrl(uploadUrl);
@@ -101,22 +102,26 @@ public class FileServiceImpl implements FileService {
     public FileObjectVo completeUpload(Long currentUserId, CompleteUploadRequest request) {
         String bucket = requiredBucket();
         if (!bucket.equals(request.getBucketName())) {
+            // 校验 bucket 是否匹配
             throw BizException.of(ErrorCode.FILE_BUCKET_MISMATCH);
         }
         String expectedPrefix = "user/" + currentUserId + "/";
         if (!request.getObjectKey().startsWith(expectedPrefix)) {
+            // 校验 objectKey 是否以预期前缀开头
             throw BizException.of(ErrorCode.FILE_OBJECT_KEY_INVALID);
         }
         // 服务端兜底校验：确认对象确实已上传且大小与上报一致
         ensureObjectUploaded(request.getBucketName(), request.getObjectKey(), request.getSizeBytes());
 
+        // 校验 objectKey 是否已存在
         FileObject existing = fileObjectMapper.selectOne(new LambdaQueryWrapper<FileObject>()
                 .eq(FileObject::getBucketName, request.getBucketName())
                 .eq(FileObject::getObjectKey, request.getObjectKey())
                 .last("LIMIT 1"));
 
-        String status = request.getBizId() == null ? "UPLOADED" : "BOUND";
+        String status = request.getBizId() == null ? "UPLOADED" : "BOUND"; // 校验业务场景类型是否为空
         if (existing == null) {
+            // 新文件写入
             FileObject created = FileObject.builder()
                     .uploaderId(currentUserId)
                     .storageProvider(storageProperties.getProvider().toUpperCase(Locale.ROOT))
@@ -142,9 +147,11 @@ public class FileServiceImpl implements FileService {
         }
 
         if (!currentUserId.equals(existing.getUploaderId())) {
+            // 校验文件是否属于当前用户
             throw BizException.of(ErrorCode.FILE_NOT_OWNER);
         }
-        String stableAccessUrl = buildPublicAccessUrl(existing.getId());
+        String stableAccessUrl = buildPublicAccessUrl(existing.getId()); // 构建公开访问 URL
+        // 更新文件元数据
         fileObjectMapper.update(null, new LambdaUpdateWrapper<FileObject>()
                 .eq(FileObject::getId, existing.getId())
                 .set(FileObject::getAccessUrl, stableAccessUrl)
@@ -155,7 +162,7 @@ public class FileServiceImpl implements FileService {
                 .set(FileObject::getBizType, request.getBizType())
                 .set(FileObject::getBizId, request.getBizId())
                 .set(FileObject::getStatus, status));
-        FileObject refreshed = fileObjectMapper.selectById(existing.getId());
+        FileObject refreshed = fileObjectMapper.selectById(existing.getId()); // 刷新文件对象
         return toVo(refreshed);
     }
 

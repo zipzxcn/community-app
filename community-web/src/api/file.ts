@@ -36,6 +36,7 @@ export async function uploadImageFile(file: File, bizType: string) {
     contentType: file.type || 'application/octet-stream',
     size: file.size,
   })
+  // 直传文件到对象存储
   await axios.put(token.uploadUrl, file, {
     headers: token.headers,
   })

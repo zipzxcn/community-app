@@ -40,8 +40,11 @@ async function refreshSessionOnce() {
 }
 
 // 请求拦截器解决的问题：业务代码无需在每个 API 调用点手工拼 Authorization 头。
-client.interceptors.request.use((config) => {
+client.interceptors.request.use(async (config) => {
   const authStore = useAuthStore()
+  if (!isRefreshRequest(config)) {
+    await authStore.ensureValidAccessToken()
+  }
   if (authStore.accessToken) {
     config.headers.Authorization = `Bearer ${authStore.accessToken}`
   }

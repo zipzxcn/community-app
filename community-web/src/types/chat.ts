@@ -14,7 +14,7 @@ export interface ChatThreadItem {
   lastMessagePreview?: string
   lastMessageAt?: string
   unreadCount: number
-  peerUser: UserSummary
+  peerUser?: UserSummary | null
 }
 
 export interface ChatMessageItem {

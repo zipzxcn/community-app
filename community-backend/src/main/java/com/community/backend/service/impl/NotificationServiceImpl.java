@@ -28,8 +28,6 @@ import java.util.stream.Collectors;
 
 /**
  * 通知服务实现：通知创建、分页查询与已读状态维护。
- */
-/**
  * 通知服务实现：
  * - 统一承接点赞、评论、关注、聊天等系统内事件。
  * - 让其它业务模块只关心“创建通知”，无需各自处理未读统计。
@@ -87,6 +85,7 @@ public class NotificationServiceImpl implements NotificationService {
                                                  Long page,
                                                  Long size) {
         Page<UserNotification> pager = new Page<>(page, size);
+        // 构建查询条件
         LambdaQueryWrapper<UserNotification> wrapper = new LambdaQueryWrapper<UserNotification>()
                 .eq(UserNotification::getReceiverId, currentUserId)
                 .orderByDesc(UserNotification::getCreatedAt);

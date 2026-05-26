@@ -80,7 +80,7 @@ public class ChatServiceImpl implements ChatService {
      */
     @Override
     public PageResponse<ChatThreadVo> listThreads(Long currentUserId, Long page, Long size) {
-        // 教学点1：先做分页参数兜底和上限保护，防止前端误传极端值导致一次拉太多数据。
+        // 1：先做分页参数兜底和上限保护，防止前端误传极端值导致一次拉太多数据。
         long safePage = page == null || page < 1 ? 1 : page;
         long safeSize = size == null || size < 1 ? 20 : Math.min(size, 50);
 
@@ -91,7 +91,7 @@ public class ChatServiceImpl implements ChatService {
                 .orderByDesc(ChatThread::getUpdatedAt));
         List<Long> threadIds = existingThreads.stream().map(ChatThread::getId).toList();
         Map<Long, ChatThreadUser> threadUserMap = loadThreadUserMap(currentUserId, threadIds);
-        // 教学点2：数据库中已有会话的对端用户，后续用于避免把同一互关对象重复补进列表。
+        // 2：数据库中已有会话的对端用户，后续用于避免把同一互关对象重复补进列表。
         Set<Long> existingPeerIds = existingThreads.stream()
                 .map(thread -> getPeerId(thread, currentUserId))
                 .collect(Collectors.toSet());
@@ -103,7 +103,11 @@ public class ChatServiceImpl implements ChatService {
         List<ChatThreadVo> list = new ArrayList<>();
         for (ChatThread thread : existingThreads) {
             ChatThread refreshed = refreshThreadStatusByMutual(thread, currentUserId);
-            list.add(toThreadVo(currentUserId, refreshed, threadUserMap.get(refreshed.getId()), peerMap.get(getPeerId(refreshed, currentUserId))));
+            UserSummaryVo peerUser = peerMap.get(getPeerId(refreshed, currentUserId));
+            if (peerUser == null) {
+                continue;
+            }
+            list.add(toThreadVo(currentUserId, refreshed, threadUserMap.get(refreshed.getId()), peerUser));
         }
 
         // 这里补充还没真正创建 threadId 的互关对象，前端点击后再真正落库创建会话。
@@ -115,7 +119,11 @@ public class ChatServiceImpl implements ChatService {
             vo.setThreadId(null);
             vo.setStatus("ACTIVE");
             vo.setUnreadCount(0);
-            vo.setPeerUser(peerMap.get(peerId));
+            UserSummaryVo peerUser = peerMap.get(peerId);
+            if (peerUser == null) {
+                continue;
+            }
+            vo.setPeerUser(peerUser);
             list.add(vo);
         }
 
@@ -149,23 +157,27 @@ public class ChatServiceImpl implements ChatService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ChatThreadVo openThread(Long currentUserId, Long targetUserId) {
+        // 防止用户自己和自己开会话
         if (currentUserId.equals(targetUserId)) {
             throw BizException.of(ErrorCode.CHAT_SELF_NOT_ALLOWED);
         }
+        // 防止目标用户不可用
         mustGetActiveUser(targetUserId);
 
         // 注意：一对一会话通过 userA=min(id), userB=max(id) 固定顺序，避免 A-B 与 B-A 生成两条会话。
         long userA = Math.min(currentUserId, targetUserId);
         long userB = Math.max(currentUserId, targetUserId);
+        // 查询是否存在会话
         ChatThread thread = chatThreadMapper.selectOne(new LambdaQueryWrapper<ChatThread>()
                 .eq(ChatThread::getUserAId, userA)
                 .eq(ChatThread::getUserBId, userB)
                 .last("LIMIT 1"));
-
         boolean mutual = isMutualFollow(currentUserId, targetUserId);
         // 注意：创建会话前先判断互关，业务规则收口在服务层而不是前端页面。
         if (thread == null) {
+            // 会话不存在，检查是否互关
             if (!mutual) {
+                // 未互关，不允许创建会话
                 throw BizException.of(ErrorCode.CHAT_REQUIRE_MUTUAL_FOLLOW);
             }
             // 首次创建会话时，初始化双方会话状态行
@@ -174,10 +186,12 @@ public class ChatServiceImpl implements ChatService {
                     .userBId(userB)
                     .status("ACTIVE")
                     .build();
-            chatThreadMapper.insert(thread);
-            ensureThreadUser(thread.getId(), currentUserId);
-            ensureThreadUser(thread.getId(), targetUserId);
+            // 创建会话记录
+            chatThreadMapper.insert(thread); //chat_thread
+            ensureThreadUser(thread.getId(), currentUserId); //chat_thread_user for currentUserId
+            ensureThreadUser(thread.getId(), targetUserId); //chat_thread_user for targetUserId
         } else {
+            // 会话存在，刷新状态
             ensureThreadUser(thread.getId(), currentUserId);
             ensureThreadUser(thread.getId(), targetUserId);
             thread = refreshThreadStatusByMutual(thread, currentUserId);
@@ -382,10 +396,11 @@ public class ChatServiceImpl implements ChatService {
      * - 非互关 -> READ_ONLY（仅可读不可发）
      */
     private ChatThread refreshThreadStatusByMutual(ChatThread thread, Long currentUserId) {
-        Long peerId = getPeerId(thread, currentUserId);
-        boolean mutual = isMutualFollow(currentUserId, peerId);
-        String expectStatus = mutual ? "ACTIVE" : "READ_ONLY";
+        Long peerId = getPeerId(thread, currentUserId); // 获取对方用户 ID
+        boolean mutual = isMutualFollow(currentUserId, peerId); // 检查是否互关
+        String expectStatus = mutual ? "ACTIVE" : "READ_ONLY"; // 获取会话状态
         if (!expectStatus.equals(thread.getStatus())) {
+            // 会话状态与预期状态不一致，更新状态
             chatThreadMapper.update(null, new LambdaUpdateWrapper<ChatThread>()
                     .eq(ChatThread::getId, thread.getId())
                     .set(ChatThread::getStatus, expectStatus));
@@ -517,6 +532,9 @@ public class ChatServiceImpl implements ChatService {
                 .collect(Collectors.toMap(UserSummaryVo::getId, Function.identity(), (a, b) -> a, LinkedHashMap::new));
     }
 
+    /**
+     * 会话实体转 VO。
+     */
     private ChatThreadVo toThreadVo(Long currentUserId, ChatThread thread, ChatThreadUser threadUser, UserSummaryVo peerUser) {
         ChatThreadVo vo = new ChatThreadVo();
         vo.setThreadId(thread.getId());
